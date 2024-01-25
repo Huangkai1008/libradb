@@ -8,10 +8,30 @@ import (
 
 func TestVarchar_New(t *testing.T) {
 	t.Run("should succeed without error", func(t *testing.T) {
-		sut, err := NewVarchar(WithLength(10))
+		t.Run("default options", func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				NewVarchar()
+			})
+		})
 
-		assert.Equal(t, sut.length, 10)
-		assert.NoError(t, err)
+		t.Run("with length option", func(t *testing.T) {
+			assert.NotPanics(t,
+				func() {
+					sut := NewVarchar(WithLength(10))
+					assert.Equal(t, sut.length, 10)
+				},
+			)
+		})
+
+		t.Run("with allow null option", func(t *testing.T) {
+			assert.NotPanics(t,
+				func() {
+					sut := NewVarchar(WithAllowNull[*Varchar](true))
+					assert.Equal(t, sut.AllowNull(), true)
+				},
+			)
+		})
+
 	})
 
 	t.Run("should raise error when length is invalid", func(t *testing.T) {
@@ -25,9 +45,9 @@ func TestVarchar_New(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				_, err := NewVarchar(WithLength(tt.length))
-
-				assert.Error(t, err)
+				assert.Panics(t, func() {
+					NewVarchar(WithLength(tt.length))
+				})
 			})
 		}
 	})
@@ -48,7 +68,7 @@ func TestVarchar_ByteSize(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				sut, _ := NewVarchar(WithLength(tt.length))
+				sut := NewVarchar(WithLength(tt.length))
 
 				bytesize := sut.ByteSize()
 
