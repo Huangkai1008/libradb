@@ -13,6 +13,7 @@ type Type interface {
 	// TypeID returns the type id of the field.
 	TypeID() TypeID
 	// ByteSize returns the byte size of the field.
+	// If the field is a variable-length field, the byte size is calculated based on the value.
 	ByteSize() int
 	Validator
 	Nullable
@@ -39,5 +40,21 @@ func applyOptions[T Type](t T, options ...Option[T]) {
 func WithAllowNull[T Nullable](allowNull bool) Option[T] {
 	return func(t T) {
 		t.setAllowNull(allowNull)
+	}
+}
+
+func IsVarLen(T Type) bool {
+	return T.TypeID() == VARCHAR
+}
+
+// Length returns the length of the field.
+//
+// Note: This function is only applicable to Variable-Length fields.
+func Length(T Type) int {
+	switch T.TypeID() {
+	case VARCHAR:
+		return T.(*Varchar).length
+	default:
+		panic("unsupported type")
 	}
 }
