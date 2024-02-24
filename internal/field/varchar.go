@@ -26,8 +26,12 @@ func (t *Varchar) TypeID() TypeID {
 	return VARCHAR
 }
 
+func (t *Varchar) PerByteSize() int {
+	return 4
+}
+
 func (t *Varchar) ByteSize() int {
-	return t.length * 4
+	return t.length * t.PerByteSize()
 }
 
 func (t *Varchar) Validate() {
