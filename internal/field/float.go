@@ -15,7 +15,7 @@ func (t *Float) TypeID() TypeID {
 }
 
 func (t *Float) ByteSize() int {
-	return 8
+	return 4
 }
 
 func (t *Float) Validate() {

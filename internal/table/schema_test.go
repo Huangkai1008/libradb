@@ -47,7 +47,7 @@ func TestSchema_ByteSize(t *testing.T) {
 				{"integer", NewSchema().WithField("x", field.NewInteger()), 4},
 				{"varchar", NewSchema().WithField("x", field.NewVarchar(field.WithLength(10))), 40},
 				{"boolean", NewSchema().WithField("x", field.NewBoolean()), 1},
-				{"float", NewSchema().WithField("x", field.NewFloat()), 8},
+				{"float", NewSchema().WithField("x", field.NewFloat()), 4},
 			}
 
 			for _, tt := range tests {

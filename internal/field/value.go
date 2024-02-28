@@ -3,6 +3,7 @@ package field
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 	"unicode/utf8"
 )
 
@@ -15,64 +16,6 @@ type Value interface {
 	Type() Type
 	Val() any
 	ToBytes() []byte
-}
-
-type IntegerValue struct {
-	t   *Integer
-	val int32
-}
-
-func NewIntegerValue(t *Integer, val int32) (IntegerValue, error) {
-	v := IntegerValue{t: t, val: val}
-	if err := validate(v); err != nil {
-		return IntegerValue{}, err
-	}
-	return v, nil
-}
-
-func (v IntegerValue) Type() Type {
-	return v.t
-}
-
-func (v IntegerValue) Val() any {
-	return v.val
-}
-
-func (v IntegerValue) ToBytes() []byte {
-	bytes := make([]byte, v.Type().ByteSize())
-	binary.LittleEndian.PutUint32(bytes, uint32(v.val))
-	return bytes
-}
-
-type VarcharValue struct {
-	t   *Varchar
-	val string
-}
-
-func NewVarcharValue(t *Varchar, val string) (VarcharValue, error) {
-	v := VarcharValue{t: t, val: val}
-	if err := validate(v); err != nil {
-		return VarcharValue{}, err
-	}
-	return v, nil
-}
-
-func (v VarcharValue) Type() Type {
-	return v.t
-}
-
-func (v VarcharValue) Val() any {
-	return v.val
-}
-
-func (v VarcharValue) ToBytes() []byte {
-	runes := []rune(v.val)
-	charCount := len(runes)
-	bytes := make([]byte, charCount*4, charCount*4)
-	for i, r := range runes {
-		binary.LittleEndian.PutUint32(bytes[i*4:], uint32(r))
-	}
-	return bytes
 }
 
 func IsNull(v Value) bool {
@@ -102,13 +45,94 @@ func FromBytes(t Type, bytes []byte) (Value, error) {
 			runes = append(runes, rune(binary.LittleEndian.Uint32(bytes[i:])))
 		}
 		return VarcharValue{t: t.(*Varchar), val: string(runes)}, nil
+	case BOOLEAN:
+		val := bytes[0] == 1
+		return BooleanValue{t: t.(*Boolean), val: val}, nil
+	case FLOAT:
+		val := math.Float32frombits(binary.LittleEndian.Uint32(bytes))
+		return FloatValue{t: t.(*Float), val: val}, nil
 	}
 	return nil, ErrValueNil
 }
 
-func validate(v Value) error {
-	if !v.Type().AllowNull() && IsNull(v) {
-		return ErrValueNil
+type IntegerValue struct {
+	t   *Integer
+	val int32
+}
+
+func (v IntegerValue) Type() Type {
+	return v.t
+}
+
+func (v IntegerValue) Val() any {
+	return v.val
+}
+
+func (v IntegerValue) ToBytes() []byte {
+	bytes := make([]byte, v.Type().ByteSize())
+	binary.LittleEndian.PutUint32(bytes, uint32(v.val))
+	return bytes
+}
+
+type VarcharValue struct {
+	t   *Varchar
+	val string
+}
+
+func (v VarcharValue) Type() Type {
+	return v.t
+}
+
+func (v VarcharValue) Val() any {
+	return v.val
+}
+
+func (v VarcharValue) ToBytes() []byte {
+	runes := []rune(v.val)
+	charCount := len(runes)
+	bytes := make([]byte, charCount*4, charCount*4)
+	for i, r := range runes {
+		binary.LittleEndian.PutUint32(bytes[i*4:], uint32(r))
 	}
-	return nil
+	return bytes
+}
+
+type BooleanValue struct {
+	t   *Boolean
+	val bool
+}
+
+func (v BooleanValue) Type() Type {
+	return v.t
+}
+
+func (v BooleanValue) Val() any {
+	return v.val
+}
+
+func (v BooleanValue) ToBytes() []byte {
+	bytes := make([]byte, 1)
+	if v.val {
+		bytes[0] = 1
+	}
+	return bytes
+}
+
+type FloatValue struct {
+	t   *Float
+	val float32
+}
+
+func (v FloatValue) Type() Type {
+	return v.t
+}
+
+func (v FloatValue) Val() any {
+	return v.val
+}
+
+func (v FloatValue) ToBytes() []byte {
+	bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bytes, math.Float32bits(v.val))
+	return bytes
 }
