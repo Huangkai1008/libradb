@@ -22,7 +22,7 @@ func TestIntegerValue_ToBytes(t *testing.T) {
 		{math.MinInt32},
 	}
 	for _, tt := range tests {
-		v, _ := NewIntegerValue(typ, tt.val)
+		v := IntegerValue{t: typ, val: tt.val}
 
 		bytes := v.ToBytes()
 		newV, err := FromBytes(typ, bytes)
@@ -48,7 +48,7 @@ func TestVarcharValue_ToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.val, func(t *testing.T) {
-			v, _ := NewVarcharValue(typ, tt.val)
+			v := VarcharValue{t: typ, val: tt.val}
 
 			bytes := v.ToBytes()
 			newV, err := FromBytes(typ, bytes)
@@ -57,5 +57,54 @@ func TestVarcharValue_ToBytes(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, v.Val(), newV.Val())
 		})
+	}
+}
+
+func TestBooleanValue_ToBytes(t *testing.T) {
+	typ := NewBoolean()
+	var tests = []struct {
+		name string
+		val  bool
+	}{
+		{"true", true},
+		{"false", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := BooleanValue{t: typ, val: tt.val}
+
+			bytes := v.ToBytes()
+			newV, err := FromBytes(typ, bytes)
+
+			assert.Equal(t, 1, len(bytes))
+			assert.NoError(t, err)
+			assert.Equal(t, v.Val(), newV.Val())
+		})
+	}
+}
+
+func TestFloatValue_ToBytes(t *testing.T) {
+	typ := NewFloat()
+	var tests = []struct {
+		val float32
+	}{
+		{0},
+		{-1.23},
+		{42.213},
+		{100.231},
+		{1000.112},
+		{-1000.23341},
+		{math.MaxFloat32},
+		{math.SmallestNonzeroFloat32},
+	}
+	for _, tt := range tests {
+		v := FloatValue{t: typ, val: tt.val}
+
+		bytes := v.ToBytes()
+		newV, err := FromBytes(typ, bytes)
+
+		assert.Equal(t, 4, len(bytes))
+		assert.NoError(t, err)
+		assert.Equal(t, v.Val(), newV.Val())
 	}
 }
