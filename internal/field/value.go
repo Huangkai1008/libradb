@@ -1,6 +1,7 @@
 package field
 
 import (
+	"cmp"
 	"encoding/binary"
 	"errors"
 	"math"
@@ -19,7 +20,7 @@ type Value interface {
 }
 
 func IsNull(v Value) bool {
-	return v.Val() == nil
+	return v == nil
 }
 
 func Bytesize(v Value) int {
@@ -60,6 +61,10 @@ type IntegerValue struct {
 	val int32
 }
 
+func (v IntegerValue) Compare(t IntegerValue) int {
+	return cmp.Compare(v.val, t.val)
+}
+
 func (v IntegerValue) Type() Type {
 	return v.t
 }
@@ -77,6 +82,10 @@ func (v IntegerValue) ToBytes() []byte {
 type VarcharValue struct {
 	t   *Varchar
 	val string
+}
+
+func (v VarcharValue) Compare(t VarcharValue) int {
+	return cmp.Compare(v.val, t.val)
 }
 
 func (v VarcharValue) Type() Type {
@@ -102,6 +111,16 @@ type BooleanValue struct {
 	val bool
 }
 
+func (v BooleanValue) Compare(t BooleanValue) int {
+	if v.val == t.val {
+		return 0
+	}
+	if v.val {
+		return 1
+	}
+	return -1
+}
+
 func (v BooleanValue) Type() Type {
 	return v.t
 }
@@ -121,6 +140,10 @@ func (v BooleanValue) ToBytes() []byte {
 type FloatValue struct {
 	t   *Float
 	val float32
+}
+
+func (v FloatValue) Compare(t FloatValue) int {
+	return cmp.Compare(v.val, t.val)
 }
 
 func (v FloatValue) Type() Type {
