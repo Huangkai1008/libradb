@@ -6,6 +6,8 @@ import (
 	"errors"
 	"math"
 	"unicode/utf8"
+
+	"github.com/Huangkai1008/libradb/pkg/typing"
 )
 
 var (
@@ -17,6 +19,22 @@ type Value interface {
 	Type() Type
 	Val() any
 	ToBytes() []byte
+	typing.Comparable[Value]
+}
+
+func NewValue(t Type, val any) Value {
+	switch t.TypeID() {
+	case INTEGER:
+		return IntegerValue{t: t.(*Integer), val: val.(int32)}
+	case VARCHAR:
+		return VarcharValue{t: t.(*Varchar), val: val.(string)}
+	case BOOLEAN:
+		return BooleanValue{t: t.(*Boolean), val: val.(bool)}
+	case FLOAT:
+		return FloatValue{t: t.(*Float), val: val.(float32)}
+	default:
+		panic("not implemented")
+	}
 }
 
 func IsNull(v Value) bool {
@@ -61,8 +79,8 @@ type IntegerValue struct {
 	val int32
 }
 
-func (v IntegerValue) Compare(t IntegerValue) int {
-	return cmp.Compare(v.val, t.val)
+func (v IntegerValue) Compare(t Value) int {
+	return cmp.Compare(v.val, t.(IntegerValue).val)
 }
 
 func (v IntegerValue) Type() Type {
@@ -84,8 +102,8 @@ type VarcharValue struct {
 	val string
 }
 
-func (v VarcharValue) Compare(t VarcharValue) int {
-	return cmp.Compare(v.val, t.val)
+func (v VarcharValue) Compare(t Value) int {
+	return cmp.Compare(v.val, t.(VarcharValue).val)
 }
 
 func (v VarcharValue) Type() Type {
@@ -111,8 +129,8 @@ type BooleanValue struct {
 	val bool
 }
 
-func (v BooleanValue) Compare(t BooleanValue) int {
-	if v.val == t.val {
+func (v BooleanValue) Compare(t Value) int {
+	if v.val == t.(BooleanValue).val {
 		return 0
 	}
 	if v.val {
@@ -142,8 +160,8 @@ type FloatValue struct {
 	val float32
 }
 
-func (v FloatValue) Compare(t FloatValue) int {
-	return cmp.Compare(v.val, t.val)
+func (v FloatValue) Compare(t Value) int {
+	return cmp.Compare(v.val, t.(FloatValue).val)
 }
 
 func (v FloatValue) Type() Type {

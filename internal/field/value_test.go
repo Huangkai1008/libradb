@@ -22,7 +22,7 @@ func TestIntegerValue_ToBytes(t *testing.T) {
 		{math.MinInt32},
 	}
 	for _, tt := range tests {
-		v := IntegerValue{t: typ, val: tt.val}
+		v := NewValue(typ, tt.val)
 
 		bytes := v.ToBytes()
 		newV, err := FromBytes(typ, bytes)
@@ -48,7 +48,7 @@ func TestVarcharValue_ToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.val, func(t *testing.T) {
-			v := VarcharValue{t: typ, val: tt.val}
+			v := NewValue(typ, tt.val)
 
 			bytes := v.ToBytes()
 			newV, err := FromBytes(typ, bytes)
@@ -71,7 +71,7 @@ func TestBooleanValue_ToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := BooleanValue{t: typ, val: tt.val}
+			v := NewValue(typ, tt.val)
 
 			bytes := v.ToBytes()
 			newV, err := FromBytes(typ, bytes)
@@ -98,7 +98,7 @@ func TestFloatValue_ToBytes(t *testing.T) {
 		{math.SmallestNonzeroFloat32},
 	}
 	for _, tt := range tests {
-		v := FloatValue{t: typ, val: tt.val}
+		v := NewValue(typ, tt.val)
 
 		bytes := v.ToBytes()
 		newV, err := FromBytes(typ, bytes)
