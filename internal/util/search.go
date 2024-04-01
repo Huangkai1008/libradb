@@ -32,3 +32,21 @@ func SearchIndex[T typing.Comparable[T]](v T, items []T) int {
 	}
 	return left
 }
+
+// InsertIndex returns the index the item should be inserted into the items.
+//
+// Note: The items must be sorted in ascending order.
+func InsertIndex[T typing.Comparable[T]](v T, items []T) int {
+	left, right := 0, len(items)
+	for left < right {
+		mid := left + (right-left)/2
+		if v.Compare(items[mid]) == 0 {
+			return mid
+		} else if v.Compare(items[mid]) > 0 {
+			left = mid + 1
+		} else {
+			right = mid
+		}
+	}
+	return left
+}
