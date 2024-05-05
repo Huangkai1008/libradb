@@ -59,7 +59,7 @@ func FromBytes(t Type, bytes []byte) (Value, error) {
 		val := int32(binary.LittleEndian.Uint32(bytes))
 		return IntegerValue{t: t.(*Integer), val: val}, nil
 	case VARCHAR:
-		runes := make([]rune, 0, len(bytes)/4)
+		runes := make([]rune, 0, len(bytes)/4) //nolint:mnd // 4 bytes per rune
 		for i := 0; i < len(bytes); i += 4 {
 			runes = append(runes, rune(binary.LittleEndian.Uint32(bytes[i:])))
 		}
@@ -117,7 +117,7 @@ func (v VarcharValue) Val() any {
 func (v VarcharValue) ToBytes() []byte {
 	runes := []rune(v.val)
 	charCount := len(runes)
-	bytes := make([]byte, charCount*4, charCount*4)
+	bytes := make([]byte, charCount*4) //nolint:mnd // 4 bytes per rune
 	for i, r := range runes {
 		binary.LittleEndian.PutUint32(bytes[i*4:], uint32(r))
 	}
@@ -173,7 +173,7 @@ func (v FloatValue) Val() any {
 }
 
 func (v FloatValue) ToBytes() []byte {
-	bytes := make([]byte, 4)
+	bytes := make([]byte, 4) //nolint:mnd // 4 bytes per float32
 	binary.LittleEndian.PutUint32(bytes, math.Float32bits(v.val))
 	return bytes
 }

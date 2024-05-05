@@ -1,14 +1,17 @@
-package field
+package field_test
 
 import (
 	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Huangkai1008/libradb/internal/field"
 )
 
 func TestIntegerValue_ToBytes(t *testing.T) {
-	typ := NewInteger()
+	typ := field.NewInteger()
 	var tests = []struct {
 		val int32
 	}{
@@ -22,19 +25,19 @@ func TestIntegerValue_ToBytes(t *testing.T) {
 		{math.MinInt32},
 	}
 	for _, tt := range tests {
-		v := NewValue(typ, tt.val)
+		v := field.NewValue(typ, tt.val)
 
 		bytes := v.ToBytes()
-		newV, err := FromBytes(typ, bytes)
+		newV, err := field.FromBytes(typ, bytes)
 
-		assert.Equal(t, 4, len(bytes))
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		assert.Len(t, bytes, 4)
 		assert.Equal(t, v.Val(), newV.Val())
 	}
 }
 
 func TestVarcharValue_ToBytes(t *testing.T) {
-	typ := NewVarchar()
+	typ := field.NewVarchar()
 	var tests = []struct {
 		val    string
 		length int
@@ -48,20 +51,20 @@ func TestVarcharValue_ToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.val, func(t *testing.T) {
-			v := NewValue(typ, tt.val)
+			v := field.NewValue(typ, tt.val)
 
 			bytes := v.ToBytes()
-			newV, err := FromBytes(typ, bytes)
+			newV, err := field.FromBytes(typ, bytes)
 
-			assert.Equal(t, Bytesize(v), len(bytes))
-			assert.NoError(t, err)
+			require.NoError(t, err)
+			assert.Len(t, bytes, field.Bytesize(v))
 			assert.Equal(t, v.Val(), newV.Val())
 		})
 	}
 }
 
 func TestBooleanValue_ToBytes(t *testing.T) {
-	typ := NewBoolean()
+	typ := field.NewBoolean()
 	var tests = []struct {
 		name string
 		val  bool
@@ -71,20 +74,20 @@ func TestBooleanValue_ToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValue(typ, tt.val)
+			v := field.NewValue(typ, tt.val)
 
 			bytes := v.ToBytes()
-			newV, err := FromBytes(typ, bytes)
+			newV, err := field.FromBytes(typ, bytes)
 
-			assert.Equal(t, 1, len(bytes))
-			assert.NoError(t, err)
+			require.NoError(t, err)
+			assert.Len(t, bytes, 1)
 			assert.Equal(t, v.Val(), newV.Val())
 		})
 	}
 }
 
 func TestFloatValue_ToBytes(t *testing.T) {
-	typ := NewFloat()
+	typ := field.NewFloat()
 	var tests = []struct {
 		val float32
 	}{
@@ -98,13 +101,13 @@ func TestFloatValue_ToBytes(t *testing.T) {
 		{math.SmallestNonzeroFloat32},
 	}
 	for _, tt := range tests {
-		v := NewValue(typ, tt.val)
+		v := field.NewValue(typ, tt.val)
 
 		bytes := v.ToBytes()
-		newV, err := FromBytes(typ, bytes)
+		newV, err := field.FromBytes(typ, bytes)
 
-		assert.Equal(t, 4, len(bytes))
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		assert.Len(t, bytes, 4)
 		assert.Equal(t, v.Val(), newV.Val())
 	}
 }

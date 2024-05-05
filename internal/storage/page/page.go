@@ -17,12 +17,3 @@ type Number uint32
 type Page interface {
 	PageNumber() Number
 }
-
-// FileHeader contains general information about the page.
-type FileHeader struct {
-	prevNumber Number
-	nextNumber Number
-	PageNumber Number
-
-	PageType Type
-}

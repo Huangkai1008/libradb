@@ -1,26 +1,39 @@
-package table
+package table_test
 
 import (
-	"github.com/Huangkai1008/libradb/internal/field"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Huangkai1008/libradb/internal/field"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 func TestSchema_Length(t *testing.T) {
 	t.Run("should be 0 when schema is empty", func(t *testing.T) {
-		s := NewSchema()
+		s := table.NewSchema()
 		assert.Equal(t, 0, s.Length())
 	})
 
 	t.Run("should be the number of fields", func(t *testing.T) {
 		var tests = []struct {
 			name     string
-			s        *Schema
+			s        *table.Schema
 			expected int
 		}{
-			{"one field", NewSchema().WithField("x", field.NewInteger()), 1},
-			{"two fields", NewSchema().WithField("x", field.NewInteger()).WithField("y", field.NewInteger()), 2},
-			{"three fields", NewSchema().WithField("x", field.NewInteger()).WithField("y", field.NewInteger()).WithField("z", field.NewInteger()), 3},
+			{"one field", table.NewSchema().
+				WithField("x", field.NewInteger()),
+				1},
+			{"two fields", table.NewSchema().
+				WithField("x", field.NewInteger()).
+				WithField("y", field.NewInteger()),
+				2},
+			{"three fields",
+				table.NewSchema().
+					WithField("x", field.NewInteger()).
+					WithField("y", field.NewInteger()).
+					WithField("z", field.NewInteger()),
+				3},
 		}
 
 		for _, tt := range tests {
@@ -33,7 +46,7 @@ func TestSchema_Length(t *testing.T) {
 
 func TestSchema_ByteSize(t *testing.T) {
 	t.Run("should be 0 when schema is empty", func(t *testing.T) {
-		s := NewSchema()
+		s := table.NewSchema()
 		assert.Equal(t, 0, s.ByteSize())
 	})
 
@@ -41,13 +54,13 @@ func TestSchema_ByteSize(t *testing.T) {
 		t.Run("one field", func(t *testing.T) {
 			var tests = []struct {
 				name     string
-				s        *Schema
+				s        *table.Schema
 				expected int
 			}{
-				{"integer", NewSchema().WithField("x", field.NewInteger()), 4},
-				{"varchar", NewSchema().WithField("x", field.NewVarchar(field.WithLength(10))), 40},
-				{"boolean", NewSchema().WithField("x", field.NewBoolean()), 1},
-				{"float", NewSchema().WithField("x", field.NewFloat()), 4},
+				{"integer", table.NewSchema().WithField("x", field.NewInteger()), 4},
+				{"varchar", table.NewSchema().WithField("x", field.NewVarchar(field.WithLength(10))), 40},
+				{"boolean", table.NewSchema().WithField("x", field.NewBoolean()), 1},
+				{"float", table.NewSchema().WithField("x", field.NewFloat()), 4},
 			}
 
 			for _, tt := range tests {
@@ -58,7 +71,7 @@ func TestSchema_ByteSize(t *testing.T) {
 		})
 
 		t.Run("multiple fields", func(t *testing.T) {
-			s := NewSchema().
+			s := table.NewSchema().
 				WithField("x", field.NewInteger()).
 				WithField("y", field.NewVarchar(field.WithLength(10))).
 				WithField("z", field.NewBoolean())

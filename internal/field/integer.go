@@ -15,7 +15,7 @@ func (t *Integer) TypeID() TypeID {
 }
 
 func (t *Integer) ByteSize() int {
-	return 4
+	return 4 // //nolint:mnd // 4 bytes for an int32
 }
 
 func (t *Integer) Validate() {

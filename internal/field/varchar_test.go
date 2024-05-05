@@ -1,24 +1,26 @@
-package field
+package field_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Huangkai1008/libradb/internal/field"
 )
 
 func TestVarchar_New(t *testing.T) {
 	t.Run("should succeed without error", func(t *testing.T) {
 		t.Run("default options", func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				NewVarchar()
+				field.NewVarchar()
 			})
 		})
 
 		t.Run("with length option", func(t *testing.T) {
 			assert.NotPanics(t,
 				func() {
-					sut := NewVarchar(WithLength(10))
-					assert.Equal(t, sut.length, 10)
+					sut := field.NewVarchar(field.WithLength(10))
+					assert.Equal(t, 10, sut.Length())
 				},
 			)
 		})
@@ -26,12 +28,11 @@ func TestVarchar_New(t *testing.T) {
 		t.Run("with allow null option", func(t *testing.T) {
 			assert.NotPanics(t,
 				func() {
-					sut := NewVarchar(WithAllowNull[*Varchar](true))
-					assert.Equal(t, sut.AllowNull(), true)
+					sut := field.NewVarchar(field.WithAllowNull[*field.Varchar](true))
+					assert.True(t, sut.AllowNull())
 				},
 			)
 		})
-
 	})
 
 	t.Run("should raise error when length is invalid", func(t *testing.T) {
@@ -46,7 +47,7 @@ func TestVarchar_New(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				assert.Panics(t, func() {
-					NewVarchar(WithLength(tt.length))
+					field.NewVarchar(field.WithLength(tt.length))
 				})
 			})
 		}
@@ -68,7 +69,7 @@ func TestVarchar_ByteSize(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				sut := NewVarchar(WithLength(tt.length))
+				sut := field.NewVarchar(field.WithLength(tt.length))
 
 				bytesize := sut.ByteSize()
 

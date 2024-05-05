@@ -27,7 +27,7 @@ func (t *Varchar) TypeID() TypeID {
 }
 
 func (t *Varchar) PerByteSize() int {
-	return 4
+	return 4 //nolint:mnd // 4 bytes for a length-prefixed string
 }
 
 func (t *Varchar) ByteSize() int {
@@ -46,4 +46,8 @@ func (t *Varchar) AllowNull() bool {
 
 func (t *Varchar) setAllowNull(b bool) {
 	t.allowsNull = b
+}
+
+func (t *Varchar) Length() int {
+	return t.length
 }

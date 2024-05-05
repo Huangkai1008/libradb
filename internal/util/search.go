@@ -21,12 +21,13 @@ func SearchIndex[T typing.Comparable[T]](v T, items []T) int {
 	// Perform binary search to find the appropriate index
 	left, right := 0, len(items)
 	for left < right {
-		mid := left + (right-left)/2
-		if v.Compare(items[mid]) == 0 {
+		mid := left + (right-left)/2 //nolint:mnd // avoid overflow
+		switch cmp := v.Compare(items[mid]); {
+		case cmp == 0:
 			return mid
-		} else if v.Compare(items[mid]) > 0 {
+		case cmp > 0:
 			left = mid
-		} else {
+		default:
 			right = mid - 1
 		}
 	}
@@ -39,12 +40,13 @@ func SearchIndex[T typing.Comparable[T]](v T, items []T) int {
 func InsertIndex[T typing.Comparable[T]](v T, items []T) int {
 	left, right := 0, len(items)
 	for left < right {
-		mid := left + (right-left)/2
-		if v.Compare(items[mid]) == 0 {
+		mid := left + (right-left)/2 //nolint:mnd // avoid overflow
+		switch cmp := v.Compare(items[mid]); {
+		case cmp == 0:
 			return mid
-		} else if v.Compare(items[mid]) > 0 {
+		case cmp > 0:
 			left = mid + 1
-		} else {
+		default:
 			right = mid
 		}
 	}

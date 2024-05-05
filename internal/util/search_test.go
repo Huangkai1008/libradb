@@ -1,11 +1,14 @@
-package util
+package util_test
 
 import (
 	"cmp"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Huangkai1008/libradb/internal/util"
 )
 
 type S struct {
@@ -17,11 +20,10 @@ func (s S) Compare(t S) int {
 }
 
 func (s S) String() string {
-	return fmt.Sprintf("%d", s.value)
+	return strconv.Itoa(s.value)
 }
 
 func TestSearchIndex(t *testing.T) {
-
 	var tests = []struct {
 		v        S
 		items    []S
@@ -33,9 +35,9 @@ func TestSearchIndex(t *testing.T) {
 		{S{1}, []S{{1}, {320}, {360}}, 0},
 		{S{0}, []S{{1}, {320}, {360}}, -1},
 	}
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%d", tt.v.value), func(t *testing.T) {
-			actual := SearchIndex(tt.v, tt.items)
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			actual := util.SearchIndex(tt.v, tt.items)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -53,9 +55,9 @@ func TestInsertIndex(t *testing.T) {
 		{S{1}, []S{{1}, {320}, {360}}, 0},
 		{S{0}, []S{{1}, {320}, {360}}, 0},
 	}
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%d", tt.v.value), func(t *testing.T) {
-			actual := InsertIndex(tt.v, tt.items)
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			actual := util.InsertIndex(tt.v, tt.items)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

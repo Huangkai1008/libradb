@@ -43,18 +43,17 @@ func WithAllowNull[T Nullable](allowNull bool) Option[T] {
 	}
 }
 
-func IsVarLen(T Type) bool {
-	return T.TypeID() == VARCHAR
+func IsVarLen(t Type) bool {
+	return t.TypeID() == VARCHAR
 }
 
 // Length returns the length of the field.
 //
 // Note: This function is only applicable to Variable-Length fields.
-func Length(T Type) int {
-	switch T.TypeID() {
-	case VARCHAR:
-		return T.(*Varchar).length
-	default:
+func Length(t Type) int {
+	if t.TypeID() != VARCHAR {
 		panic("unsupported type")
 	}
+
+	return t.(*Varchar).length
 }
