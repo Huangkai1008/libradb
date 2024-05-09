@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Go ${{ matrix.python-version }}
+      - name: Setup Go ${{ matrix.go-version }}
         uses: actions/setup-go@v5
         with:
           python-version: ${{ matrix.go-version }}
