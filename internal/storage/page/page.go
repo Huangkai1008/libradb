@@ -17,3 +17,7 @@ type Number uint32
 type Page interface {
 	PageNumber() Number
 }
+
+type FileHeader struct {
+	PageNumber Number
+}
