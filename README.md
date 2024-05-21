@@ -1,6 +1,6 @@
 # LibraDB
 
-[![Build Status](https://travis-ci.org/Huangkai1008/libradb.svg?branch=master)](https://travis-ci.org/Huangkai1008/libradb)
+[![test](https://github.com/Huangkai1008/libradb/actions/workflows/tests.yml/badge.svg)](https://github.com/Huangkai1008/libradb/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/Huangkai1008/libradb/branch/master/graph/badge.svg)](https://codecov.io/gh/Huangkai1008/libradb)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Huangkai1008/libradb)](https://goreportcard.com/report/github.com/Huangkai1008/libradb)
 [![GoDoc](https://godoc.org/github.com/Huangkai1008/libradb?status.svg)](https://godoc.org/github.com/Huangkai1008/libradb)
