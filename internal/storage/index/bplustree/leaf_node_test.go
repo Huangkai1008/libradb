@@ -94,7 +94,7 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 
 		var tests []test
 
-		for i := 0; i < suite.timesToOverflow(leafNode); i++ {
+		for i := 0; i < suite.timesToOverflow(leafNode); i++ { //nolint:intrange // goland not supports
 			tests = append(tests, test{
 				key: field.NewValue(typ, int32(i)),
 				rid: &datapage.RecordID{PageNumber: 1, HeapNumber: uint16(i)},
