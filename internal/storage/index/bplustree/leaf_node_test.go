@@ -13,39 +13,32 @@ import (
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
-type test struct {
+type testLeaf struct {
 	key bplustree.Key
 	rid *datapage.RecordID
 }
 
-type DummyPage struct {
+type dummyLeafPage struct {
 	mock.Mock
 }
 
-func (d *DummyPage) PageNumber() page.Number {
+func (d *dummyLeafPage) PageNumber() page.Number {
 	return page.Number(rand.Uint32())
 }
 
-type DummyBufferManager struct {
-	mock.Mock
+func (d *dummyLeafPage) IsLeaf() bool {
+	return true
 }
 
-func (m *DummyBufferManager) ApplyNewPage(spaceID table.SpaceID) (page.Page, error) {
-	args := m.Called(spaceID)
-	return args.Get(0).(page.Page), args.Error(1)
+type LeafNodeTestSuite struct {
+	suite.Suite
+	bufferManager memory.BufferManager
 }
 
-func (m *DummyBufferManager) FetchPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error) {
-	args := m.Called(spaceID, pageNumber)
-	return args.Get(0).(page.Page), args.Error(1)
-}
-
-func (m *DummyBufferManager) Close() error {
-	args := m.Called()
-	return args.Error(0)
+func TestLeafTestSuite(t *testing.T) {
+	suite.Run(t, new(LeafNodeTestSuite))
 }
 
 func (suite *LeafNodeTestSuite) getEmptyLeafNode() (*bplustree.LeafNode, error) {
@@ -59,15 +52,10 @@ func (suite *LeafNodeTestSuite) timesToOverflow(node *bplustree.LeafNode) int {
 	return int(node.Order() * 2)
 }
 
-type LeafNodeTestSuite struct {
-	suite.Suite
-	bufferManager memory.BufferManager
-}
-
 func (suite *LeafNodeTestSuite) SetupTest() {
 	bufferManager := new(DummyBufferManager)
-	bufferManager.On("ApplyNewPage", mock.Anything).Return(new(DummyPage), nil)
-	bufferManager.On("FetchPage", mock.Anything, mock.Anything).Return(new(DummyPage), nil)
+	bufferManager.On("ApplyNewPage", mock.Anything).Return(new(dummyLeafPage), nil)
+	bufferManager.On("FetchPage", mock.Anything, mock.Anything).Return(new(dummyLeafPage), nil)
 	bufferManager.On("Close").Return(nil)
 
 	suite.bufferManager = bufferManager
@@ -92,17 +80,17 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 
 		typ := &field.Integer{}
 
-		var tests []test
+		var tests []testLeaf
 
 		for i := 0; i < suite.timesToOverflow(leafNode); i++ { //nolint:intrange // goland not supports
-			tests = append(tests, test{
+			tests = append(tests, testLeaf{
 				key: field.NewValue(typ, int32(i)),
 				rid: &datapage.RecordID{PageNumber: 1, HeapNumber: uint16(i)},
 			})
 		}
 
 		for i, tt := range tests {
-			suite.Run(fmt.Sprintf("test %d", i), func() {
+			suite.Run(fmt.Sprintf("testLeaf %d", i), func() {
 				pair, err := leafNode.Put(tt.key, tt.rid)
 
 				suite.Require().NoError(err)
@@ -117,18 +105,18 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 
 		typ := &field.Integer{}
 
-		var tests []test
+		var tests []testLeaf
 
 		i := 0
 		for ; i < suite.timesToOverflow(leafNode); i++ {
-			tests = append(tests, test{
+			tests = append(tests, testLeaf{
 				key: field.NewValue(typ, int32(i)),
 				rid: &datapage.RecordID{PageNumber: 1, HeapNumber: uint16(i)},
 			})
 		}
 
 		for i, tt := range tests {
-			suite.Run(fmt.Sprintf("test %d", i), func() {
+			suite.Run(fmt.Sprintf("testLeaf %d", i), func() {
 				_, err := leafNode.Put(tt.key, tt.rid)
 
 				suite.Require().NoError(err)
@@ -153,7 +141,7 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 		}
 
 		for j, k := i, 0; j < i+10; j++ {
-			suite.Run(fmt.Sprintf("test %d", k), func() {
+			suite.Run(fmt.Sprintf("testLeaf %d", k), func() {
 				pair, err := leafNode.Put(
 					field.NewValue(typ, int32(j)), &datapage.RecordID{PageNumber: 1, HeapNumber: uint16(j)},
 				)
@@ -165,8 +153,4 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 			k++
 		}
 	})
-}
-
-func TestLeafTestSuite(t *testing.T) {
-	suite.Run(t, new(LeafNodeTestSuite))
 }

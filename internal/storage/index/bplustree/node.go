@@ -2,6 +2,7 @@ package bplustree
 
 import (
 	"github.com/Huangkai1008/libradb/internal/field"
+	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 )
@@ -31,4 +32,21 @@ type BPlusNode interface {
 	sync() error
 	// isOverflowed returns true if the node is overflowed.
 	isOverflowed() bool
+}
+
+// BPlusNodeFrom creates a new B+ tree page.
+func BPlusNodeFrom(
+	pageNumber page.Number,
+	meta *Metadata,
+	buffManager memory.BufferManager,
+) (BPlusNode, error) {
+	p, err := buffManager.FetchPage(meta.tableSpaceID, pageNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.IsLeaf() {
+		return NewLeafNode(meta, buffManager, WithLeafPage(p))
+	}
+	return NewInnerNode(meta, buffManager, WithInnerPage(p))
 }

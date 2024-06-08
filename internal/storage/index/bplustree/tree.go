@@ -8,7 +8,9 @@ import (
 )
 
 // BPlusTree is used for indexing.
+//
 // An index tree starts at a root page and has a height.
+// Different from InnoDB, the root page can be updated.
 type BPlusTree struct {
 	meta *Metadata
 	root BPlusNode

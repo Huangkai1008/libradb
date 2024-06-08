@@ -17,12 +17,6 @@ var (
 
 type LeafNodeOption func(*LeafNode)
 
-func applyLeafNodeOptions(node *LeafNode, options ...LeafNodeOption) {
-	for _, option := range options {
-		option(node)
-	}
-}
-
 // LeafNode is the leaf page in the B+ tree.
 type LeafNode struct {
 	meta          *Metadata
@@ -64,6 +58,12 @@ func NewLeafNode(
 	return node, nil
 }
 
+func applyLeafNodeOptions(node *LeafNode, options ...LeafNodeOption) {
+	for _, option := range options {
+		option(node)
+	}
+}
+
 func WithKeys(keys []Key) LeafNodeOption {
 	return func(node *LeafNode) {
 		node.keys = keys
@@ -85,6 +85,12 @@ func WithPrevPageNumber(prevPageNumber page.Number) LeafNodeOption {
 func WithNextPageNumber(nextPageNumber page.Number) LeafNodeOption {
 	return func(node *LeafNode) {
 		node.nextPageNumber = nextPageNumber
+	}
+}
+
+func WithLeafPage(page page.Page) LeafNodeOption {
+	return func(node *LeafNode) {
+		node.page = page
 	}
 }
 
