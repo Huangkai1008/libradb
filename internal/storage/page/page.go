@@ -16,6 +16,7 @@ type Number uint32
 
 type Page interface {
 	PageNumber() Number
+	IsLeaf() bool
 }
 
 type FileHeader struct {
