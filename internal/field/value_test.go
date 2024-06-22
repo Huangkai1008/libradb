@@ -13,7 +13,7 @@ import (
 func TestIntegerValue_ToBytes(t *testing.T) {
 	typ := field.NewInteger()
 	var tests = []struct {
-		val int32
+		val int
 	}{
 		{0},
 		{-1},

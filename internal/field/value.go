@@ -25,7 +25,7 @@ type Value interface {
 func NewValue(t Type, val any) Value {
 	switch t.TypeID() {
 	case INTEGER:
-		return IntegerValue{t: t.(*Integer), val: val.(int32)}
+		return IntegerValue{t: t.(*Integer), val: int32(val.(int))}
 	case VARCHAR:
 		return VarcharValue{t: t.(*Varchar), val: val.(string)}
 	case BOOLEAN:
@@ -95,6 +95,10 @@ func (v IntegerValue) ToBytes() []byte {
 	bytes := make([]byte, v.Type().ByteSize())
 	binary.LittleEndian.PutUint32(bytes, uint32(v.val))
 	return bytes
+}
+
+func (v IntegerValue) String() string {
+	return string(v.val)
 }
 
 type VarcharValue struct {
