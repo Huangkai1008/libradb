@@ -1,3 +1,7 @@
+// Package bplustree package is used for indexing.
+// Inspired by CS186, UC Berkeley.
+//
+// See https://cs186berkeley.net/notes/note4/
 package bplustree
 
 import (
@@ -6,6 +10,23 @@ import (
 	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
+
+// Metadata of a B+ tree.
+//
+// Each node (except the root node) must have Order ≤ x ≤ 2 * Order entries assuming no deleting happens
+// (it’s possible for leaf nodes to end up with < Order entries if you delete data).
+// The entries within each node must be sorted.
+type Metadata struct {
+	Order        uint32
+	tableSpaceID table.SpaceID
+	// rootPageNumber cannot be changed.
+	rootPageNumber page.Number
+	height         uint32
+}
+
+func (meta *Metadata) incrHeight() {
+	meta.height++
+}
 
 // BPlusTree is used for indexing.
 //
@@ -46,22 +67,29 @@ func (tree *BPlusTree) Get(key Key) (*datapage.RecordID, error) {
 }
 
 func (tree *BPlusTree) Put(key Key, id *datapage.RecordID) error {
-	_, err := tree.root.Put(key, id)
+	pair, err := tree.root.Put(key, id)
 	if err != nil {
 		return err
 	}
 
+	if pair == nil {
+		return nil
+	}
+
+	keys := []Key{pair.Key()}
+	children := []page.Number{tree.root.PageNumber(), pair.Value()}
+	root, err1 := NewIndexNode(
+		tree.meta, tree.bufferManager, WithIndexKeys(keys), WithChildren(children),
+	)
+	if err1 != nil {
+		return err1
+	}
+	return tree.updateRoot(root)
+}
+
+func (tree *BPlusTree) updateRoot(newRoot BPlusNode) error {
+	tree.root = newRoot
+	tree.meta.rootPageNumber = newRoot.PageNumber()
+	tree.meta.incrHeight()
 	return nil
-}
-
-type Metadata struct {
-	Order        uint32
-	tableSpaceID table.SpaceID
-	// rootPageNumber cannot be changed.
-	rootPageNumber page.Number
-	height         uint32
-}
-
-func (meta *Metadata) incrHeight() {
-	meta.height++
 }

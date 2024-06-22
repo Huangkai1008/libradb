@@ -8,15 +8,23 @@ import (
 )
 
 type Pair struct {
-	Key   field.Value
+	key   Key
 	value page.Number
+}
+
+func (p Pair) Key() Key {
+	return p.key
+}
+
+func (p Pair) Value() page.Number {
+	return p.value
 }
 
 type Key = field.Value
 
 // BPlusNode represents a page in the B+ tree.
 //
-// Pages can be either non-leaf (inner/internal) nodes or leaf nodes.
+// Pages can be either non-leaf (index/internal) nodes or leaf nodes.
 // We assign each page in the tree a level in the page header, leaf pages are at level 0,
 // and the level increments going up the tree.
 type BPlusNode interface {
@@ -27,6 +35,9 @@ type BPlusNode interface {
 	// it returns the key and page number of the new node.
 	// Otherwise, it returns nil.
 	Put(key Key, rid *datapage.RecordID) (*Pair, error)
+
+	// PageNumber returns the page number of the page underlying the node.
+	PageNumber() page.Number
 
 	// sync synchronizes the node with the underlying page.
 	sync() error
@@ -48,5 +59,5 @@ func BPlusNodeFrom(
 	if p.IsLeaf() {
 		return NewLeafNode(meta, buffManager, WithLeafPage(p))
 	}
-	return NewInnerNode(meta, buffManager, WithInnerPage(p))
+	return NewIndexNode(meta, buffManager, WithIndexPage(p))
 }

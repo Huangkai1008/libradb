@@ -11,29 +11,46 @@ import (
 	"github.com/Huangkai1008/libradb/internal/util"
 )
 
-type S struct {
+type test struct {
 	value int
 }
 
-func (s S) Compare(t S) int {
+func testsSlice(numbers ...[]int) []test {
+	var tests []test
+	for _, nums := range numbers {
+		for _, num := range nums {
+			tests = append(tests, test{num})
+		}
+	}
+	return tests
+}
+
+func (s test) Compare(t test) int {
 	return cmp.Compare[int](s.value, t.value)
 }
 
-func (s S) String() string {
+func (s test) String() string {
 	return strconv.Itoa(s.value)
 }
 
 func TestSearchIndex(t *testing.T) {
 	var tests = []struct {
-		v        S
-		items    []S
+		v        test
+		items    []test
 		expected int
 	}{
-		{S{20}, []S{{1}, {5}, {12}, {200}}, 2},
-		{S{27}, []S{{1}, {320}, {360}}, 0},
-		{S{320}, []S{{1}, {320}, {360}}, 1},
-		{S{1}, []S{{1}, {320}, {360}}, 0},
-		{S{0}, []S{{1}, {320}, {360}}, -1},
+		{test{5}, testsSlice([]int{25, 50, 60, 75}), 0},
+		{test{25}, testsSlice([]int{25, 50, 60, 75}), 1},
+		{test{28}, testsSlice([]int{25, 50, 60, 75}), 1},
+		{test{50}, testsSlice([]int{25, 50, 60, 75}), 2},
+		{test{55}, testsSlice([]int{25, 50, 60, 75}), 2},
+		{test{60}, testsSlice([]int{25, 50, 60, 75}), 3},
+		{test{75}, testsSlice([]int{25, 50, 60, 75}), 4},
+		{test{90}, testsSlice([]int{25, 50, 60, 75}), 4},
+		{test{100}, testsSlice([]int{25, 50, 60, 75}), 4},
+		{test{0}, testsSlice([]int{25, 50, 60, 75}), 0},
+		{test{-1}, testsSlice([]int{25, 50, 60, 75}), 0},
+		{test{10000}, testsSlice([]int{25, 50, 60, 75}), 4},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
@@ -45,15 +62,17 @@ func TestSearchIndex(t *testing.T) {
 
 func TestInsertIndex(t *testing.T) {
 	var tests = []struct {
-		v        S
-		items    []S
+		v        test
+		items    []test
 		expected int
 	}{
-		{S{20}, []S{{1}, {5}, {12}, {200}}, 3},
-		{S{27}, []S{{1}, {320}, {360}}, 1},
-		{S{320}, []S{{1}, {320}, {360}}, 1},
-		{S{1}, []S{{1}, {320}, {360}}, 0},
-		{S{0}, []S{{1}, {320}, {360}}, 0},
+		{test{20}, testsSlice([]int{1, 5, 12, 200}), 3},
+		{test{27}, testsSlice([]int{1, 320, 360}), 1},
+		{test{320}, testsSlice([]int{1, 320, 360}), 1},
+		{test{1}, testsSlice([]int{1, 320, 360}), 0},
+		{test{0}, testsSlice([]int{1, 320, 360}), 0},
+		{test{360}, testsSlice([]int{1, 320, 360}), 2},
+		{test{28}, testsSlice([]int{5, 10, 15, 20, 25, 30}), 5},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {

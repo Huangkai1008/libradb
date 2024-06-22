@@ -64,7 +64,7 @@ func applyLeafNodeOptions(node *LeafNode, options ...LeafNodeOption) {
 	}
 }
 
-func WithKeys(keys []Key) LeafNodeOption {
+func WithLeafKeys(keys []Key) LeafNodeOption {
 	return func(node *LeafNode) {
 		node.keys = keys
 	}
@@ -76,15 +76,15 @@ func WithRids(rids []*datapage.RecordID) LeafNodeOption {
 	}
 }
 
-func WithPrevPageNumber(prevPageNumber page.Number) LeafNodeOption {
+func WithLeafPrev(prev page.Number) LeafNodeOption {
 	return func(node *LeafNode) {
-		node.prevPageNumber = prevPageNumber
+		node.prevPageNumber = prev
 	}
 }
 
-func WithNextPageNumber(nextPageNumber page.Number) LeafNodeOption {
+func WithLeafNext(next page.Number) LeafNodeOption {
 	return func(node *LeafNode) {
-		node.nextPageNumber = nextPageNumber
+		node.nextPageNumber = next
 	}
 }
 
@@ -120,15 +120,15 @@ func (node *LeafNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
 	}
 
 	// Split the node, right node gets the rightmost key and recordID.
-	rightKeys := append([]Key{}, node.keys[len(node.keys)-1:]...)
-	rightRids := append([]*datapage.RecordID{}, node.rids[len(node.rids)-1:]...)
+	rightKeys := append([]Key{}, node.keys[len(node.keys)-1])
+	rightRids := append([]*datapage.RecordID{}, node.rids[len(node.rids)-1])
 	rightNode, err := NewLeafNode(
 		node.meta,
 		node.bufferManager,
-		WithKeys(rightKeys),
+		WithLeafKeys(rightKeys),
 		WithRids(rightRids),
-		WithPrevPageNumber(node.page.PageNumber()),
-		WithNextPageNumber(node.nextPageNumber),
+		WithLeafPrev(node.page.PageNumber()),
+		WithLeafNext(node.nextPageNumber),
 	)
 	if err != nil {
 		return nil, err
@@ -143,10 +143,14 @@ func (node *LeafNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
 
 	splitKey := rightKeys[0]
 	pair := &Pair{
-		Key:   splitKey,
+		key:   splitKey,
 		value: rightNode.page.PageNumber(),
 	}
 	return pair, nil
+}
+
+func (node *LeafNode) PageNumber() page.Number {
+	return node.page.PageNumber()
 }
 
 func (node *LeafNode) sync() error {
