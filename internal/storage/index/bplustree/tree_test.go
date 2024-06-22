@@ -3,16 +3,16 @@ package bplustree_test
 import (
 	"errors"
 	"fmt"
-	"github.com/Huangkai1008/libradb/internal/field"
-	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 	"math/rand"
 	"testing"
 
-	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
-	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/Huangkai1008/libradb/internal/field"
+	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
+	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
+	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
@@ -106,7 +106,6 @@ func (suite *BPlusTreeTestSuite) TestBPlusTreePut() {
 
 		// (4)
 		err := tree.Put(field.NewValue(typ, 4), datapage.NewRecordID(4, 4))
-		fmt.Println(tree)
 		suite.Require().NoError(err)
 
 		// (4, 9)
