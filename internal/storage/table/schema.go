@@ -6,7 +6,7 @@ type fieldName = string
 
 type Schema struct {
 	fieldNames []fieldName
-	fieldTypes []field.Type
+	FieldTypes []field.Type
 	bytesize   int
 }
 
@@ -16,7 +16,7 @@ func NewSchema() *Schema {
 
 func (s *Schema) WithField(name fieldName, t field.Type) *Schema {
 	s.fieldNames = append(s.fieldNames, name)
-	s.fieldTypes = append(s.fieldTypes, t)
+	s.FieldTypes = append(s.FieldTypes, t)
 	s.bytesize += t.ByteSize()
 	return s
 }
