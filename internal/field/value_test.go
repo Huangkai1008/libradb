@@ -89,7 +89,7 @@ func TestBooleanValue_ToBytes(t *testing.T) {
 func TestFloatValue_ToBytes(t *testing.T) {
 	typ := field.NewFloat()
 	var tests = []struct {
-		val float32
+		val float64
 	}{
 		{0},
 		{-1.23},

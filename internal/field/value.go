@@ -4,7 +4,9 @@ import (
 	"cmp"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/Huangkai1008/libradb/pkg/typing"
@@ -31,7 +33,7 @@ func NewValue(t Type, val any) Value {
 	case BOOLEAN:
 		return BooleanValue{t: t.(*Boolean), val: val.(bool)}
 	case FLOAT:
-		return FloatValue{t: t.(*Float), val: val.(float32)}
+		return FloatValue{t: t.(*Float), val: float32(val.(float64))}
 	default:
 		panic("not implemented")
 	}
@@ -98,7 +100,7 @@ func (v IntegerValue) ToBytes() []byte {
 }
 
 func (v IntegerValue) String() string {
-	return string(v.val)
+	return strconv.Itoa(int(v.val))
 }
 
 type VarcharValue struct {
@@ -126,6 +128,10 @@ func (v VarcharValue) ToBytes() []byte {
 		binary.LittleEndian.PutUint32(bytes[i*4:], uint32(r))
 	}
 	return bytes
+}
+
+func (v VarcharValue) String() string {
+	return v.val
 }
 
 type BooleanValue struct {
@@ -159,6 +165,10 @@ func (v BooleanValue) ToBytes() []byte {
 	return bytes
 }
 
+func (v BooleanValue) String() string {
+	return strconv.FormatBool(v.val)
+}
+
 type FloatValue struct {
 	t   *Float
 	val float32
@@ -180,4 +190,8 @@ func (v FloatValue) ToBytes() []byte {
 	bytes := make([]byte, 4) //nolint:mnd // 4 bytes per float32
 	binary.LittleEndian.PutUint32(bytes, math.Float32bits(v.val))
 	return bytes
+}
+
+func (v FloatValue) String() string {
+	return fmt.Sprint(v.val)
 }
