@@ -17,9 +17,12 @@ import (
 // the buffer manager communicates with the disk space manager to perform the required disk operations.
 type BufferManager interface {
 	// ApplyNewPage reads a page from disk and applies it to memory.
-	ApplyNewPage(spaceID table.SpaceID) (page.Page, error)
+	ApplyNewPage(spaceID table.SpaceID, p page.Page) error
 	// FetchPage fetches the specified page.
 	FetchPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error)
-
+	// PinPage pins the specified page.
+	PinPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error)
+	// UnpinPage unpins the specified page.
+	UnpinPage(spaceID table.SpaceID, pageNumber page.Number) error
 	io.Closer
 }
