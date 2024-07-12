@@ -3,7 +3,6 @@ package bplustree_test
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -12,27 +11,8 @@ import (
 	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
-	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
-
-type dummyPage struct {
-	pageNumber page.Number
-}
-
-func newDummyPage(pageNumber page.Number) *dummyPage {
-	return &dummyPage{
-		pageNumber: pageNumber,
-	}
-}
-
-func (p *dummyPage) PageNumber() page.Number {
-	return p.pageNumber
-}
-
-func (p *dummyPage) IsLeaf() bool {
-	return true
-}
 
 // dummyBufferManager is a dummy implementation of memory.BufferManager.
 // Use spaceID and pageNumber as the key to store pages.
@@ -46,12 +26,10 @@ func newDummyBufferManager() *dummyBufferManager {
 	}
 }
 
-func (m *dummyBufferManager) ApplyNewPage(spaceID table.SpaceID) (page.Page, error) {
-	pageNumber := page.Number(rand.Uint32())
-	p := newDummyPage(pageNumber)
-	key := fmt.Sprintf("%d:%d", spaceID, pageNumber)
+func (m *dummyBufferManager) ApplyNewPage(spaceID table.SpaceID, p page.Page) error {
+	key := fmt.Sprintf("%d:%d", spaceID, p.PageNumber())
 	m.pageMap[key] = p
-	return p, nil
+	return nil
 }
 
 func (m *dummyBufferManager) FetchPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error) {
@@ -61,6 +39,16 @@ func (m *dummyBufferManager) FetchPage(spaceID table.SpaceID, pageNumber page.Nu
 		return nil, errors.New("page not found")
 	}
 	return p, nil
+}
+
+func (m *dummyBufferManager) PinPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *dummyBufferManager) UnpinPage(spaceID table.SpaceID, pageNumber page.Number) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (m *dummyBufferManager) Close() error {
@@ -102,14 +90,31 @@ func (suite *BPlusTreeTestSuite) TestBPlusTreePut() {
 		tree, _ := bplustree.NewBPlusTree(&bplustree.Metadata{
 			Order: 1,
 		}, suite.bufferManager)
-		typ := field.NewInteger()
+		pkType := field.NewInteger()
 
 		// (4)
-		err := tree.Put(field.NewValue(typ, 4), datapage.NewRecordID(4, 4))
+		err := tree.Put(field.NewValue(pkType, 4), page.NewRecordFromLiteral(4, 4))
 		suite.Require().NoError(err)
 
 		// (4, 9)
-		err = tree.Put(field.NewValue(typ, 9), datapage.NewRecordID(9, 9))
+		err = tree.Put(field.NewValue(pkType, 9), page.NewRecordFromLiteral(4, 4))
 		suite.Require().NoError(err)
+
+		//   (6)
+		//  /   \
+		// (4) (6 9)
+		err = tree.Put(field.NewValue(pkType, 6), page.NewRecordFromLiteral(4, 4))
+		suite.Require().NoError(err)
+
+		//     (6)
+		//    /   \
+		// (2 4) (6 9)
+		err = tree.Put(field.NewValue(pkType, 2), page.NewRecordFromLiteral(4, 4))
+		suite.Require().NoError(err)
+
+		//      (6 7)
+		//     /  |  \
+		// (2 4) (6) (7 9)
+		err = tree.Put(field.NewValue(pkType, 7), page.NewRecordFromLiteral(4, 4))
 	})
 }

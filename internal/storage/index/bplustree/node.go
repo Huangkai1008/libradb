@@ -4,7 +4,6 @@ import (
 	"github.com/Huangkai1008/libradb/internal/field"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
-	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 )
 
 type Pair struct {
@@ -34,7 +33,7 @@ type BPlusNode interface {
 	// If put operation causes the node to split,
 	// it returns the key and page number of the new node.
 	// Otherwise, it returns nil.
-	Put(key Key, rid *datapage.RecordID) (*Pair, error)
+	Put(key Key, record *page.Record) (*Pair, error)
 
 	// PageNumber returns the page number of the page underlying the node.
 	PageNumber() page.Number
@@ -56,8 +55,10 @@ func BPlusNodeFrom(
 		return nil, err
 	}
 
-	if p.IsLeaf() {
-		return NewLeafNode(meta, buffManager, WithLeafPage(p))
+	dataPage := page.DataPageFromBytes(p.Buffer())
+
+	if dataPage.IsLeaf() {
+		return NewLeafNode(meta, buffManager, WithLeafPage(dataPage))
 	}
-	return NewIndexNode(meta, buffManager, WithIndexPage(p))
+	return NewInnerNode(meta, buffManager, WithInnerPage(dataPage))
 }

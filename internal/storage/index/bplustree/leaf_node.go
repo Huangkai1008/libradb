@@ -2,11 +2,12 @@ package bplustree
 
 import (
 	"errors"
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
-	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 	"github.com/Huangkai1008/libradb/internal/util"
 )
 
@@ -20,16 +21,11 @@ type LeafNodeOption func(*LeafNode)
 // LeafNode is the leaf page in the B+ tree.
 type LeafNode struct {
 	meta          *Metadata
-	page          page.Page
+	page          *page.DataPage
 	bufferManager memory.BufferManager
 
 	// keys present the primary key of the record.
 	keys []Key
-	// rids present the record identifier of the record.
-	rids []*datapage.RecordID
-	// prevPageNumber and nextPageNumber are the sibling leaf nodes.
-	prevPageNumber page.Number
-	nextPageNumber page.Number
 }
 
 func NewLeafNode(
@@ -37,19 +33,16 @@ func NewLeafNode(
 	buffManager memory.BufferManager,
 	options ...LeafNodeOption,
 ) (*LeafNode, error) {
-	threshold := meta.Order * 2 //nolint:mnd // a threshold is the maximum number of keys in the leaf node.
 	node := &LeafNode{
 		meta:          meta,
+		page:          page.NewDataPage(true),
 		bufferManager: buffManager,
-		keys:          make([]Key, 0, threshold),
-		rids:          make([]*datapage.RecordID, 0, threshold),
 	}
-	p, err := buffManager.ApplyNewPage(meta.tableSpaceID)
+
+	err := buffManager.ApplyNewPage(meta.tableSpaceID, node.page)
 	if err != nil {
 		return nil, err
 	}
-	node.page = p
-
 	applyLeafNodeOptions(node, options...)
 	if err = node.sync(); err != nil {
 		return nil, err
@@ -64,33 +57,27 @@ func applyLeafNodeOptions(node *LeafNode, options ...LeafNodeOption) {
 	}
 }
 
-func WithLeafKeys(keys []Key) LeafNodeOption {
-	return func(node *LeafNode) {
-		node.keys = keys
-	}
-}
-
-func WithRids(rids []*datapage.RecordID) LeafNodeOption {
-	return func(node *LeafNode) {
-		node.rids = rids
-	}
-}
-
 func WithLeafPrev(prev page.Number) LeafNodeOption {
 	return func(node *LeafNode) {
-		node.prevPageNumber = prev
+		node.page.SetPrev(prev)
 	}
 }
 
 func WithLeafNext(next page.Number) LeafNodeOption {
 	return func(node *LeafNode) {
-		node.nextPageNumber = next
+		node.page.SetNext(next)
 	}
 }
 
-func WithLeafPage(page page.Page) LeafNodeOption {
+func WithLeafPage(page *page.DataPage) LeafNodeOption {
 	return func(node *LeafNode) {
 		node.page = page
+	}
+}
+
+func WithDataRecords(records []*page.Record) LeafNodeOption {
+	return func(node *LeafNode) {
+		node.page.SetRecords(records)
 	}
 }
 
@@ -103,14 +90,14 @@ func (node *LeafNode) Get(key Key) (*LeafNode, error) {
 
 // Put the key and record identifier into the subtree rooted by node.
 // If key already exists, raise an error.
-func (node *LeafNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
+func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 	if slices.Contains(node.keys, key) {
 		return nil, ErrKeyExists
 	}
 
 	insertIndex := util.InsertIndex(key, node.keys)
 	node.keys = slices.Insert(node.keys, insertIndex, key)
-	node.rids = slices.Insert(node.rids, insertIndex, rid)
+	node.page.SetRecords(slices.Insert(node.page.Records(), insertIndex, record))
 
 	if !node.isOverflowed() {
 		if err := node.sync(); err != nil {
@@ -119,24 +106,24 @@ func (node *LeafNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
 		return nil, nil //nolint:nilnil // nil is returned to indicate no split is needed.
 	}
 
-	// Split the node, right node gets the rightmost key and recordID.
-	rightKeys := append([]Key{}, node.keys[len(node.keys)-1])
-	rightRids := append([]*datapage.RecordID{}, node.rids[len(node.rids)-1])
+	// When the leaf splits, it returns the first entry in the right node as the split key.
+	// `d` entries remain in the left node; `d + 1` entries are moved to the right node.
+	rightKeys := node.keys[node.meta.Order:]
+	rightRecords := node.page.Records()[node.meta.Order:]
 	rightNode, err := NewLeafNode(
 		node.meta,
 		node.bufferManager,
-		WithLeafKeys(rightKeys),
-		WithRids(rightRids),
 		WithLeafPrev(node.page.PageNumber()),
-		WithLeafNext(node.nextPageNumber),
+		WithLeafNext(node.page.NextPageNumber()),
+		WithDataRecords(rightRecords),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	node.keys = node.keys[:len(node.keys)-1]
-	node.rids = node.rids[:len(node.rids)-1]
-	node.nextPageNumber = rightNode.page.PageNumber()
+	node.keys = node.keys[:node.meta.Order]
+	node.page.SetNext(rightNode.page.PageNumber())
+	node.page.SetRecords(node.page.Records()[:node.meta.Order])
 	if err = node.sync(); err != nil {
 		return nil, err
 	}
@@ -154,7 +141,6 @@ func (node *LeafNode) PageNumber() page.Number {
 }
 
 func (node *LeafNode) sync() error {
-	// TODO: implement sync
 	return nil
 }
 
@@ -167,11 +153,21 @@ func (node *LeafNode) isOverflowed() bool {
 	return len(node.keys) > int(2*node.meta.Order) //nolint:mnd // 2*order is the threshold.
 }
 
-func (node *LeafNode) GetRecordID(key Key) *datapage.RecordID {
+func (node *LeafNode) GetRecord(key Key) *page.Record {
 	index := slices.Index(node.keys, key)
 	if index == -1 {
 		return nil
 	}
 
-	return node.rids[index]
+	return node.page.Records()[index]
+}
+
+func (node *LeafNode) String() string {
+	var buffer strings.Builder
+	buffer.WriteString("LeafNode(")
+	buffer.WriteString(fmt.Sprintf("keys=%v, ", node.keys))
+	buffer.WriteString(fmt.Sprintf("rids=%v  ", node.page.Records()))
+	buffer.WriteString(fmt.Sprintf("prev=%d, ", node.page.PrevPageNumber()))
+	buffer.WriteString(fmt.Sprintf("next=%d)", node.page.NextPageNumber()))
+	return buffer.String()
 }

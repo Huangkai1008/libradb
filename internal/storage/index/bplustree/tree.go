@@ -7,7 +7,6 @@ package bplustree
 import (
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
-	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
@@ -57,17 +56,17 @@ func NewBPlusTree(meta *Metadata, bufferManager memory.BufferManager) (*BPlusTre
 	return tree, nil
 }
 
-func (tree *BPlusTree) Get(key Key) (*datapage.RecordID, error) {
+func (tree *BPlusTree) Get(key Key) (*page.Record, error) {
 	leafNode, err := tree.root.Get(key)
 	if err != nil {
 		return nil, err
 	}
 
-	return leafNode.GetRecordID(key), nil
+	return leafNode.GetRecord(key), nil
 }
 
-func (tree *BPlusTree) Put(key Key, id *datapage.RecordID) error {
-	pair, err := tree.root.Put(key, id)
+func (tree *BPlusTree) Put(key Key, record *page.Record) error {
+	pair, err := tree.root.Put(key, record)
 	if err != nil {
 		return err
 	}
@@ -78,8 +77,8 @@ func (tree *BPlusTree) Put(key Key, id *datapage.RecordID) error {
 
 	keys := []Key{pair.Key()}
 	children := []page.Number{tree.root.PageNumber(), pair.Value()}
-	root, err1 := NewIndexNode(
-		tree.meta, tree.bufferManager, WithIndexKeys(keys), WithChildren(children),
+	root, err1 := NewInnerNode(
+		tree.meta, tree.bufferManager, WithInnerKeys(keys), WithChildren(children),
 	)
 	if err1 != nil {
 		return err1

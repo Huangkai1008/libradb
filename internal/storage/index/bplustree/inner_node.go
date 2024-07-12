@@ -1,27 +1,28 @@
 package bplustree
 
 import (
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
-	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
 	"github.com/Huangkai1008/libradb/internal/util"
 )
 
-type IndexNodeOption func(*IndexNode)
+type InnerNodeOption func(*InnerNode)
 
-// IndexNode is the non-leaf page in the B+ tree.
+// InnerNode is the non-leaf page in the B+ tree.
 //
-// Index pages' records contain keys and child page numbers.
+// Inner pages' records contain keys and child page numbers.
 // Since there are at most 2 * Order entries in a node,
-// index nodes may have at most 2 * Order +1 child pointers.
+// inner nodes may have at most 2 * Order +1 child pointers.
 // This is also called the tree’s fanout.
 //
 // See https://cs186berkeley.net/notes/note4/#properties to learn more.
-type IndexNode struct {
+type InnerNode struct {
 	meta          *Metadata
-	page          page.Page
+	page          *page.DataPage
 	bufferManager memory.BufferManager
 
 	// keys present the minimum key on the child page they point to,
@@ -29,74 +30,71 @@ type IndexNode struct {
 	keys []Key
 	// children present the page number of the child page.
 	children []page.Number
-	// prevPageNumber and nextPageNumber are the sibling index nodes.
-	prevPageNumber page.Number
-	nextPageNumber page.Number
 }
 
-func NewIndexNode(
+func NewInnerNode(
 	meta *Metadata,
 	buffManager memory.BufferManager,
-	options ...IndexNodeOption,
-) (*IndexNode, error) {
-	threshold := meta.Order * 2 //nolint:mnd // a threshold is the maximum number of keys in the index node.
-	node := &IndexNode{
+	options ...InnerNodeOption,
+) (*InnerNode, error) {
+	threshold := meta.Order * 2 //nolint:mnd // a threshold is the maximum number of keys in the inner node.
+	node := &InnerNode{
 		meta:          meta,
 		bufferManager: buffManager,
 		keys:          make([]Key, 0, threshold),
 		children:      make([]page.Number, 0, threshold+1),
 	}
-	p, err := buffManager.ApplyNewPage(meta.tableSpaceID)
+
+	node.page = page.NewDataPage(false)
+	err := buffManager.ApplyNewPage(meta.tableSpaceID, node.page)
 	if err != nil {
 		return nil, err
 	}
-	node.page = p
-
-	applyIndexNodeOptions(node, options...)
+	applyInnerNodeOptions(node, options...)
 	if err = node.sync(); err != nil {
 		return nil, err
 	}
 	return node, nil
 }
 
-func applyIndexNodeOptions(node *IndexNode, options ...IndexNodeOption) {
+func applyInnerNodeOptions(node *InnerNode, options ...InnerNodeOption) {
 	for _, option := range options {
 		option(node)
 	}
 }
 
-func WithIndexKeys(keys []Key) IndexNodeOption {
-	return func(node *IndexNode) {
+func WithInnerKeys(keys []Key) InnerNodeOption {
+	return func(node *InnerNode) {
 		node.keys = keys
 	}
 }
 
-func WithChildren(children []page.Number) IndexNodeOption {
-	return func(node *IndexNode) {
+func WithChildren(children []page.Number) InnerNodeOption {
+	return func(node *InnerNode) {
 		node.children = children
 	}
 }
 
-func WithIndexPage(page page.Page) IndexNodeOption {
-	return func(node *IndexNode) {
+func WithInnerPage(page *page.DataPage) InnerNodeOption {
+	return func(node *InnerNode) {
 		node.page = page
 	}
 }
 
-func WithIndexPrev(prev page.Number) IndexNodeOption {
-	return func(node *IndexNode) {
-		node.prevPageNumber = prev
+func WithInnerPrev(prev page.Number) InnerNodeOption {
+	return func(node *InnerNode) {
+		node.page.SetPrev(prev)
 	}
 }
 
-func WithIndexNext(next page.Number) IndexNodeOption {
-	return func(node *IndexNode) {
-		node.nextPageNumber = next
+func WithInnerNext(next page.Number) InnerNodeOption {
+	return func(node *InnerNode) {
+		node.page.SetNext(next)
 	}
 }
 
 // Get the leaf node that may contain the key.
-func (node *IndexNode) Get(key Key) (*LeafNode, error) {
+func (node *InnerNode) Get(key Key) (*LeafNode, error) {
 	index := util.SearchIndex(key, node.keys)
 	pageNumber := node.children[index]
 	child, err := BPlusNodeFrom(pageNumber, node.meta, node.bufferManager)
@@ -107,7 +105,7 @@ func (node *IndexNode) Get(key Key) (*LeafNode, error) {
 	return child.Get(key)
 }
 
-func (node *IndexNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
+func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
 	index := util.SearchIndex(key, node.keys)
 	pageNumber := node.children[index]
 	child, err := BPlusNodeFrom(pageNumber, node.meta, node.bufferManager)
@@ -115,7 +113,7 @@ func (node *IndexNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
 		return nil, err
 	}
 
-	pair, err := child.Put(key, rid)
+	pair, err := child.Put(key, record)
 	if err != nil {
 		return nil, err
 	}
@@ -137,25 +135,26 @@ func (node *IndexNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
 		return nil, nil //nolint:nilnil // nil is returned to indicate no split is needed.
 	}
 
-	// Split the node, right node gets the rightmost key and children.
-	rightKeys := append([]Key{}, node.keys[len(node.keys)-1])
-	rightChildren := append([]page.Number{}, node.children[len(node.children)-1])
-	rightNode, err := NewIndexNode(
+	// When an inner node splits, the first d entries are kept in the left node
+	// and the last d entries are moved to the right node.
+	// The middle key is moved up to the parent node.
+	rightKeys := append([]Key{}, node.keys[node.meta.Order:]...)
+	rightChildren := append([]page.Number{}, node.children[node.meta.Order:]...)
+	rightNode, err := NewInnerNode(
 		node.meta,
 		node.bufferManager,
-		WithIndexKeys(rightKeys),
+		WithInnerKeys(rightKeys),
 		WithChildren(rightChildren),
-		WithIndexPrev(node.page.PageNumber()),
-		WithIndexNext(node.nextPageNumber),
+		WithInnerPrev(node.page.PageNumber()),
+		WithInnerNext(node.page.NextPageNumber()),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Remove the rightmost key and children from the left node.
-	node.keys = node.keys[:len(node.keys)-1]
-	node.children = node.children[:len(node.children)-1]
-	node.nextPageNumber = rightNode.page.PageNumber()
+	node.keys = node.keys[:node.meta.Order]
+	node.children = node.children[:node.meta.Order+1]
+	node.page.SetPrev(rightNode.page.PageNumber())
 	if err = node.sync(); err != nil {
 		return nil, err
 	}
@@ -164,16 +163,25 @@ func (node *IndexNode) Put(key Key, rid *datapage.RecordID) (*Pair, error) {
 	return &Pair{key: splitKey, value: rightNode.page.PageNumber()}, nil
 }
 
-func (node *IndexNode) PageNumber() page.Number {
+func (node *InnerNode) PageNumber() page.Number {
 	return node.page.PageNumber()
 }
 
-func (node *IndexNode) sync() error {
-	// TODO: implement sync
+func (node *InnerNode) String() string {
+	var buffer strings.Builder
+	buffer.WriteString("InnerNode(")
+	buffer.WriteString(fmt.Sprintf("keys=%v, ", node.keys))
+	buffer.WriteString(fmt.Sprintf("children=%v  ", node.children))
+	buffer.WriteString(fmt.Sprintf("prev=%d, ", node.page.PrevPageNumber()))
+	buffer.WriteString(fmt.Sprintf("next=%d)", node.page.NextPageNumber()))
+	return buffer.String()
+}
+
+func (node *InnerNode) sync() error {
 	return nil
 }
 
-func (node *IndexNode) isOverflowed() bool {
+func (node *InnerNode) isOverflowed() bool {
 	// FIXME: use the byte size of used space to determine if the node is overflowed.
 	return len(node.keys) > int(2*node.meta.Order) //nolint:mnd // 2*order is the threshold.
 }

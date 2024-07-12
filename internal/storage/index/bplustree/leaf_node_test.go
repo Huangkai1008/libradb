@@ -9,12 +9,12 @@ import (
 	"github.com/Huangkai1008/libradb/internal/field"
 	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page/datapage"
+	"github.com/Huangkai1008/libradb/internal/storage/page"
 )
 
 type testLeaf struct {
-	key bplustree.Key
-	rid *datapage.RecordID
+	key    bplustree.Key
+	record *page.Record
 }
 
 type LeafNodeTestSuite struct {
@@ -58,44 +58,49 @@ func (suite *LeafNodeTestSuite) TestNewLeafNode() {
 func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 	suite.Run("should not split when put not overflowed", func() {
 		leafNode, _ := suite.getEmptyLeafNode()
-		typ := &field.Integer{}
+		primaryType := field.NewInteger()
 		var tests []testLeaf
 		for i := 0; i < 5; i++ { //nolint:intrange // goland not supports
+			key := field.NewValue(primaryType, i)
 			tests = append(tests, testLeaf{
-				key: field.NewValue(typ, i),
-				rid: datapage.NewRecordID(1, uint16(i)),
+				key:    key,
+				record: page.NewRecordFromLiteral(i, true, fmt.Sprintf("record-%d", i)),
 			})
 		}
 
 		for i, tt := range tests {
 			suite.Run(fmt.Sprintf("testLeaf %d", i), func() {
-				pair, err := leafNode.Put(tt.key, tt.rid)
+				pair, err := leafNode.Put(tt.key, tt.record)
 
 				suite.Require().NoError(err)
 				suite.Nil(pair)
-				suite.Equal(tt.rid, leafNode.GetRecordID(tt.key))
+
+				getRecord := leafNode.GetRecord(tt.key)
+				suite.Require().NotNil(getRecord)
+				suite.True(getRecord.Equal(tt.record))
 			})
 		}
 	})
 
 	suite.Run("should raise error when put duplicate key", func() {
 		leafNode, _ := suite.getEmptyLeafNode()
-		typ := &field.Integer{}
+		primaryType := field.NewInteger()
 		var tests []testLeaf
 		for i := 0; i < 5; i++ {
+			key := field.NewValue(primaryType, i)
 			tests = append(tests, testLeaf{
-				key: field.NewValue(typ, i),
-				rid: datapage.NewRecordID(1, uint16(i)),
+				key:    key,
+				record: page.NewRecordFromLiteral(i, 3.34),
 			})
 		}
 
 		for i, tt := range tests {
 			suite.Run(fmt.Sprintf("testLeaf %d", i), func() {
-				_, err := leafNode.Put(tt.key, tt.rid)
+				_, err := leafNode.Put(tt.key, tt.record)
 
 				suite.Require().NoError(err)
 
-				pair, err := leafNode.Put(tt.key, tt.rid)
+				pair, err := leafNode.Put(tt.key, tt.record)
 				suite.Require().Error(err)
 				suite.Nil(pair)
 			})
@@ -104,25 +109,27 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 
 	suite.Run("should split when put overflowed", func() {
 		leafNode, _ := suite.getEmptyLeafNode()
-		typ := &field.Integer{}
+		primaryType := field.NewInteger()
 		i := 0
+		var tests []testLeaf
 		for ; i < suite.timesToOverflow(leafNode); i++ {
-			_, _ = leafNode.Put(
-				field.NewValue(typ, i), datapage.NewRecordID(1, uint16(i)),
-			)
-		}
-
-		for j, k := i, 0; j < i+5; j++ {
-			suite.Run(fmt.Sprintf("testLeaf %d", k), func() {
-				pair, err := leafNode.Put(
-					field.NewValue(typ, j), datapage.NewRecordID(1, uint16(j)),
-				)
-
-				suite.Require().NoError(err)
-				suite.NotNil(pair)
-				suite.Equal(field.NewValue(typ, j), pair.Key())
+			key := field.NewValue(primaryType, i)
+			tests = append(tests, testLeaf{
+				key:    key,
+				record: page.NewRecordFromLiteral(i, i, i),
 			})
-			k++
 		}
+
+		for _, tt := range tests {
+			_, _ = leafNode.Put(tt.key, tt.record)
+		}
+
+		pair, err := leafNode.Put(
+			field.NewValue(primaryType, i),
+			page.NewRecordFromLiteral(i, i, i),
+		)
+
+		suite.Require().NoError(err)
+		suite.NotNil(pair)
 	})
 }
