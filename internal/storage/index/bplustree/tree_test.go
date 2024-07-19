@@ -41,14 +41,14 @@ func (m *dummyBufferManager) FetchPage(spaceID table.SpaceID, pageNumber page.Nu
 	return p, nil
 }
 
+//nolint:revive,nilnil // Ignore linter error for now.
 func (m *dummyBufferManager) PinPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error) {
-	//TODO implement me
-	panic("implement me")
+	return nil, nil
 }
 
+//nolint:revive // Ignore linter error for now.
 func (m *dummyBufferManager) UnpinPage(spaceID table.SpaceID, pageNumber page.Number) error {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (m *dummyBufferManager) Close() error {
@@ -116,5 +116,6 @@ func (suite *BPlusTreeTestSuite) TestBPlusTreePut() {
 		//     /  |  \
 		// (2 4) (6) (7 9)
 		err = tree.Put(field.NewValue(pkType, 7), page.NewRecordFromLiteral(4, 4))
+		suite.Require().NoError(err)
 	})
 }

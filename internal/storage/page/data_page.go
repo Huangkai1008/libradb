@@ -1,16 +1,9 @@
 package page
 
 import (
-	"encoding/binary"
-	"errors"
 	"math"
 
 	"github.com/Huangkai1008/libradb/internal/config"
-	"github.com/Huangkai1008/libradb/internal/field"
-)
-
-var (
-	ErrRecordNotFound = errors.New("record not found")
 )
 
 const (
@@ -31,8 +24,6 @@ const (
 type DataPage struct {
 	fileHeader  *fileHeader
 	pageHeader  *pageHeader
-	infimum     *infimumRecord
-	supremum    *supremumRecord
 	records     []*Record
 	directory   *directory
 	fileTrailer *fileTrailer
@@ -44,8 +35,6 @@ func NewDataPage(isLeaf bool) *DataPage {
 		pageHeader: &pageHeader{
 			isLeaf: isLeaf,
 		},
-		infimum:     newInfimumRecord(),
-		supremum:    newSupremumRecord(),
 		directory:   newDirectory(),
 		fileTrailer: &fileTrailer{},
 	}
@@ -92,39 +81,6 @@ func (p *DataPage) SetRecords(records []*Record) {
 	p.records = records
 }
 
-// GetRecordByKey returns the record by the given key.
-func (p *DataPage) GetRecordByKey(key field.Value) (*RecordID, error) {
-	slotIndex, err := p.directory.findSlotIndex(key, p.ToBytes())
-	if err != nil {
-		return nil, err
-	}
-
-	// Because the slot offset stores the last record offset,
-	// We need to iterate from the last slot.
-	slotIndex--
-	// Use nextRecordOffset to find the record.
-	offset := p.directory.slotOffsets[slotIndex]
-	endOffset := p.directory.slotOffsets[slotIndex+1]
-	buf := p.Buffer()
-	for offset != endOffset {
-		recBuf := buf[offset-RecordHeaderByteSize : offset]
-		recordHeader := recordHeaderFromBytes(recBuf)
-		byteSize := uint16(field.Bytesize(key))
-		slotKey, byteErr := field.FromBytes(key.Type(), buf[offset:offset+byteSize])
-		if byteErr != nil {
-			return nil, byteErr
-		}
-
-		if slotKey.Compare(key) == 0 {
-			return NewRecordID(p.PageNumber(), recordHeader.heapNumber), nil
-		}
-
-		offset = uint16(int(offset) + int(recordHeader.nextRecordOffset))
-	}
-
-	return nil, ErrRecordNotFound
-}
-
 // ToBytes converts the data page to a byte slice.
 //
 // The page format is inspired by the InnoDB page format,
@@ -146,7 +102,7 @@ func (p *DataPage) GetRecordByKey(key field.Value) (*RecordID, error) {
 // | Directory         |
 // +-------------------+
 // | File Trailer      |
-// +-------------------+
+// +-------------------+ <- Page Size.
 func (p *DataPage) ToBytes() []byte {
 	buf := make([]byte, config.PageSize)
 
@@ -155,13 +111,6 @@ func (p *DataPage) ToBytes() []byte {
 	offset += FileHeaderByteSize
 
 	copy(buf[offset:], p.pageHeader.toBytes())
-	offset += DataPageHeaderByteSize
-
-	copy(buf[offset:], p.infimum.toBytes())
-	offset += InfimumByteSize
-
-	copy(buf[offset:], p.supremum.toBytes())
-	offset += SupremumByteSize
 
 	// fileTrailer is from the end of the page.
 	copy(buf[config.PageSize-FileTrailerByteSize:], p.fileTrailer.toBytes())
@@ -183,15 +132,9 @@ func DataPageFromBytes(buf []byte) *DataPage {
 	page.pageHeader = pageHeaderFromBytes(buf[offset:])
 	offset += DataPageHeaderByteSize
 
-	page.infimum = infimumRecordFromBytes(buf[offset:])
-	offset += InfimumByteSize
-
-	page.supremum = supremumRecordFromBytes(buf[offset:])
-	offset += SupremumByteSize
-
 	page.directory = fromBytesDirectory(buf[offset:])
 
-	page.fileTrailer = fileTrailerFromBytes(buf[config.PageSize-FileTrailerByteSize:])
+	page.fileTrailer = fileTrailerFromBytes()
 
 	return page
 }
@@ -216,56 +159,4 @@ func pageHeaderFromBytes(buf []byte) *pageHeader {
 	return &pageHeader{
 		isLeaf: buf[0] == 1,
 	}
-}
-
-// infimumRecord refers to the smallest record in a page.
-type infimumRecord struct {
-	header *recordHeader
-}
-
-func newInfimumRecord() *infimumRecord {
-	return &infimumRecord{
-		header: &recordHeader{
-			recordType: INFIMUM,
-		},
-	}
-}
-
-// toBytes converts the infimum record to a byte slice.
-// The infimum record is a fixed InfimumByteSize record.
-// The first 5 bytes are the header of the record,
-// and the rest of the bytes are the payload of the record.
-func (r *infimumRecord) toBytes() []byte {
-	buf := make([]byte, InfimumByteSize)
-	copy(buf[:InfimumHeaderSize], r.header.toBytes())
-	binary.LittleEndian.PutUint64(buf[InfimumHeaderSize:], InfimumValue)
-	return buf
-}
-
-func infimumRecordFromBytes(buf []byte) *infimumRecord {
-	return &infimumRecord{}
-}
-
-// supremumRecord refers to the largest record in a page.
-type supremumRecord struct {
-	header *recordHeader
-}
-
-func newSupremumRecord() *supremumRecord {
-	return &supremumRecord{
-		header: &recordHeader{
-			recordType: SUPREMUM,
-		},
-	}
-}
-
-func (r *supremumRecord) toBytes() []byte {
-	buf := make([]byte, SupremumByteSize)
-	copy(buf[:SupremumHeaderSize], r.header.toBytes())
-	binary.LittleEndian.PutUint64(buf[SupremumHeaderSize:], SupremumValue)
-	return buf
-}
-
-func supremumRecordFromBytes(buf []byte) *supremumRecord {
-	return &supremumRecord{}
 }

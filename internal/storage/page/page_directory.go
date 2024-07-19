@@ -2,8 +2,6 @@ package page
 
 import (
 	"encoding/binary"
-
-	"github.com/Huangkai1008/libradb/internal/field"
 )
 
 // We divide the normal records info groups, each group has a slot.
@@ -28,10 +26,6 @@ func newDirectory() *directory {
 	return dir
 }
 
-func (d *directory) size() int {
-	return len(d.slotOffsets)
-}
-
 func (d *directory) toBytes() []byte {
 	buf := make([]byte, 0)
 	offset := 0
@@ -40,37 +34,6 @@ func (d *directory) toBytes() []byte {
 		offset += 2
 	}
 	return buf
-}
-
-// findSlotIndex use binary search to find the index in the page directory by key.
-func (d *directory) findSlotIndex(key field.Value, buf []byte) (int, error) {
-	left, right := 0, d.size()
-	for left < right {
-		mid := int(uint(left+right) >> 1)
-		offset := d.slotOffsets[mid]
-
-		recBuf := buf[offset-RecordHeaderByteSize : offset]
-		recordHeader := recordHeaderFromBytes(recBuf)
-		recordType := recordHeader.recordType
-		if recordType == INFIMUM {
-			left = mid + 1
-		} else if recordType == SUPREMUM {
-			right = mid
-		} else {
-			byteSize := uint16(field.Bytesize(key))
-			slotKey, err := field.FromBytes(key.Type(), buf[offset:offset+byteSize])
-			if err != nil {
-				return -1, err
-			}
-
-			if slotKey.Compare(key) < 0 {
-				left = mid + 1
-			} else {
-				right = mid
-			}
-		}
-	}
-	return left, nil
 }
 
 func fromBytesDirectory(buf []byte) *directory {

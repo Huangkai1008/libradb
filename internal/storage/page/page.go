@@ -2,8 +2,10 @@
 package page
 
 import (
+	"crypto/rand"
 	"encoding/binary"
-	"math/rand"
+	"math"
+	"math/big"
 )
 
 type Type = uint16
@@ -22,7 +24,8 @@ const InvalidPageNumber = 0
 type Number uint32
 
 func NewNumber() Number {
-	return Number(rand.Uint32())
+	n, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	return Number(n.Uint64())
 }
 
 type pageOffset = uint16
@@ -110,6 +113,6 @@ func (t *fileTrailer) toBytes() []byte {
 
 // fileTrailerFromBytes creates a fileTrailer from a byte slice.
 // The fileTrailer took the last FileTrailerByteSize bytes of a page.
-func fileTrailerFromBytes(buf []byte) *fileTrailer {
+func fileTrailerFromBytes() *fileTrailer {
 	return &fileTrailer{}
 }

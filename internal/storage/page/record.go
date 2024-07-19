@@ -1,11 +1,9 @@
 package page
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
+
 	"github.com/Huangkai1008/libradb/internal/field"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type RecordType = rune
@@ -19,18 +17,13 @@ const (
 	SUPREMUM
 )
 
-const (
-	deleteBitMask   = 1 << 7
-	ownedNumberMask = 0x7 << 4
-	recordTypeMask  = 0x7
-)
-
 // Record is the row format, inspired by the mysql InnoDB `compact` format.
 type Record struct {
 	header *recordHeader
 	values []field.Value
 }
 
+//nolint:unused // Ignore unused for now.
 type recordHeader struct {
 	// deleted is true if the record is deleted, cost 1 bit.
 	deleted bool
@@ -91,83 +84,58 @@ func (r *Record) Equal(other *Record) bool {
 	return true
 }
 
-func (h *recordHeader) toBytes() []byte {
-	buf := make([]byte, InfimumHeaderSize)
-	var b byte
-	if h.deleted {
-		b |= deleteBitMask
-	}
-	b |= h.ownedNumber << 4
-	b |= byte(h.recordType)
-	buf[0] = b
-	binary.LittleEndian.PutUint16(buf[1:3], h.heapNumber)
-	binary.LittleEndian.PutUint16(buf[3:5], uint16(h.nextRecordOffset))
-	return buf
-}
-
-func recordHeaderFromBytes(buf []byte) *recordHeader {
-	b := buf[0]
-	return &recordHeader{
-		deleted:          b&deleteBitMask != 0,
-		ownedNumber:      (b & ownedNumberMask) >> 4,
-		recordType:       RecordType(b & recordTypeMask),
-		heapNumber:       binary.LittleEndian.Uint16(buf[1:3]),
-		nextRecordOffset: int16(binary.LittleEndian.Uint16(buf[3:5])),
-	}
-}
-
-func (r *Record) ToBytes(s table.Schema) []byte {
-	var header []byte
-	// Variable length field length list stores the byte length of each variable length field.
-	// Notes the null value of variable length field is not stored in the list.
-	// The list is stored in reverse order.
-	for i := s.Length() - 1; i >= 0; i-- {
-		fieldType, fieldValue := s.FieldTypes[i], r.values[i]
-		if field.IsVarLen(fieldType) && !field.IsNull(fieldValue) {
-			maxLength := field.Length(fieldType)
-			// Set `M` as the maximum character length of the field, and `L` as the actual byte length of the field.
-			// If `M` is greater than 255 and `L` is greater than 127, the field length is stored in 2 bytes.
-			// Otherwise, the field length is stored in 1 byte.
-			byteSize := field.Bytesize(fieldValue)
-			if maxLength*4 > 255 && byteSize > 127 {
-				binary.LittleEndian.AppendUint16(header, uint16(byteSize))
-			} else {
-				header = append(header, byte(byteSize))
-			}
-		}
-	}
-
-	// Null bitmap stores the null value of each field.
-	// The null bitmap is stored in reverse order.
-	// If the field allows NULL value, the corresponding bit is set to 1.
-	// Otherwise, the corresponding bit is set to 0.
-	// If all fields are not NULL, the null bitmap is not stored.
-	nullBitmap := make([]byte, (s.Length()+7)/8)
-	count := 0
-	for i := s.Length() - 1; i >= 0; i-- {
-		fieldType, fieldValue := s.FieldTypes[i], r.values[i]
-		if fieldType.AllowNull() {
-			if field.IsNull(fieldValue) {
-				nullBitmap[count/8] |= 1 << (count % 8)
-			}
-			count++
-		}
-	}
-	// Shrinks the null bitmap to the minimum size.
-	if count > 0 {
-		nullBitmap = nullBitmap[:count/8+1]
-		header = append(header, nullBitmap...)
-	}
-
-	// Record header part toke fixed 5 bytes.
-	header = append(header, []byte{0, 0, 0, 0, 0}...)
-
-	buf := bytes.NewBuffer(nil)
-	for _, fieldValue := range r.values {
-		if !field.IsNull(fieldValue) {
-			buf.Write(fieldValue.ToBytes())
-		}
-	}
-
-	return buf.Bytes()
-}
+// func (r *Record) ToBytes(s table.Schema) []byte {
+//	var header []byte
+//	// Variable length field length list stores the byte length of each variable length field.
+//	// Notes the null value of variable length field is not stored in the list.
+//	// The list is stored in reverse order.
+//	for i := s.Length() - 1; i >= 0; i-- {
+//		fieldType, fieldValue := s.FieldTypes[i], r.values[i]
+//		if field.IsVarLen(fieldType) && !field.IsNull(fieldValue) {
+//			maxLength := field.Length(fieldType)
+//			// Set `M` as the maximum character length of the field, and `L` as the actual byte length of the field.
+//			// If `M` is greater than 255 and `L` is greater than 127, the field length is stored in 2 bytes.
+//			// Otherwise, the field length is stored in 1 byte.
+//			byteSize := field.Bytesize(fieldValue)
+//			if maxLength*4 > 255 && byteSize > 127 {
+//				binary.LittleEndian.AppendUint16(header, uint16(byteSize))
+//			} else {
+//				header = append(header, byte(byteSize))
+//			}
+//		}
+//	}
+//
+//	// Null bitmap stores the null value of each field.
+//	// The null bitmap is stored in reverse order.
+//	// If the field allows NULL value, the corresponding bit is set to 1.
+//	// Otherwise, the corresponding bit is set to 0.
+//	// If all fields are not NULL, the null bitmap is not stored.
+//	nullBitmap := make([]byte, (s.Length()+7)/8)
+//	count := 0
+//	for i := s.Length() - 1; i >= 0; i-- {
+//		fieldType, fieldValue := s.FieldTypes[i], r.values[i]
+//		if fieldType.AllowNull() {
+//			if field.IsNull(fieldValue) {
+//				nullBitmap[count/8] |= 1 << (count % 8)
+//			}
+//			count++
+//		}
+//	}
+//	// Shrinks the null bitmap to the minimum size.
+//	if count > 0 {
+//		nullBitmap = nullBitmap[:count/8+1]
+//		header = append(header, nullBitmap...)
+//	}
+//
+//	// Record header part toke fixed 5 bytes.
+//	header = append(header, []byte{0, 0, 0, 0, 0}...)
+//
+//	buf := bytes.NewBuffer(nil)
+//	for _, fieldValue := range r.values {
+//		if !field.IsNull(fieldValue) {
+//			buf.Write(fieldValue.ToBytes())
+//		}
+//	}
+//
+//	return buf.Bytes()
+//}
