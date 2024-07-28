@@ -2,6 +2,28 @@
 ## [Unreleased]
 
 
+<a name="v0.5.0"></a>
+## [v0.5.0] - 2024-07-28
+### Bug Fixes
+- **field:** float field value type
+- **field:** integer value type check
+- **index:** judge whether a page is leaf
+
+### Code Refactoring
+- **page:** remove unused implementation
+- **table:** export table schema field name
+
+### Features
+- **config:** add default page size
+- **index:** b+ tree index get/put implementation
+- **index:** new inner node
+- **index:** use data page to implement b+ tree
+- **index:** b+ tree base implementation
+- **memory:** buffer manager pin and unpin method
+- **page:** data page record id
+- **page:** new data page
+
+
 <a name="v0.4.0"></a>
 ## [v0.4.0] - 2024-06-01
 ### Bug Fixes
@@ -54,7 +76,8 @@
 - **field:** type interface
 
 
-[Unreleased]: https://github.com/Huangkai1008/libradb/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Huangkai1008/libradb/compare/v0.5.0...HEAD
+[v0.5.0]: https://github.com/Huangkai1008/libradb/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/Huangkai1008/libradb/compare/v0.3.0...v0.4.0
 [v0.3.0]: https://github.com/Huangkai1008/libradb/compare/v0.2.0...v0.3.0
 [v0.2.0]: https://github.com/Huangkai1008/libradb/compare/v0.1.0...v0.2.0
