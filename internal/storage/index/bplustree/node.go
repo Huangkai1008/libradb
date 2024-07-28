@@ -1,6 +1,8 @@
 package bplustree
 
 import (
+	"errors"
+
 	"github.com/Huangkai1008/libradb/internal/field"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
@@ -55,10 +57,17 @@ func BPlusNodeFrom(
 		return nil, err
 	}
 
-	dataPage := page.DataPageFromBytes(p.Buffer())
+	dataPage, ok := p.(*page.DataPage)
+	if !ok {
+		return nil, errors.New("not a data page")
+	}
 
 	if dataPage.IsLeaf() {
-		return NewLeafNode(meta, buffManager, WithLeafPage(dataPage))
+		return leafNodeFromPage(meta, buffManager, dataPage), nil
 	}
-	return NewInnerNode(meta, buffManager, WithInnerPage(dataPage))
+	return innerNodeFromPage(meta, buffManager, dataPage), nil
+}
+
+func newIndexRecord(key Key, pageNumber page.Number) *page.Record {
+	return page.NewRecord(key, field.NewValue(field.NewInteger(), int(pageNumber)))
 }

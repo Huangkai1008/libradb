@@ -6,6 +6,26 @@ import (
 	"github.com/Huangkai1008/libradb/pkg/typing"
 )
 
+// FindIndex returns the index the item first occurs,
+// or -1 if not present.
+//
+// Note: The items must be sorted in ascending order.
+func FindIndex[T typing.Comparable[T]](v T, items []T) int {
+	left, right := 0, len(items)-1
+	for left <= right {
+		mid := left + (right-left)/2 //nolint:mnd // avoid overflow
+		switch cmp := v.Compare(items[mid]); {
+		case cmp == 0:
+			return mid
+		case cmp > 0:
+			left = mid + 1
+		default:
+			right = mid - 1
+		}
+	}
+	return -1
+}
+
 // SearchIndex returns the index the item should be into the range.
 //
 // Note: The items must be sorted in ascending order.

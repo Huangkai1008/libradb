@@ -1,9 +1,13 @@
 package page
 
 import (
+	"encoding/binary"
+	"fmt"
 	"math"
+	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/config"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 const (
@@ -81,6 +85,10 @@ func (p *DataPage) SetRecords(records []*Record) {
 	p.records = records
 }
 
+func (p *DataPage) RecordCount() int {
+	return len(p.records)
+}
+
 // ToBytes converts the data page to a byte slice.
 //
 // The page format is inspired by the InnoDB page format,
@@ -110,19 +118,37 @@ func (p *DataPage) ToBytes() []byte {
 	copy(buf[offset:], p.fileHeader.toBytes())
 	offset += FileHeaderByteSize
 
+	p.pageHeader.recordCount = uint16(len(p.records))
 	copy(buf[offset:], p.pageHeader.toBytes())
+	offset += DataPageHeaderByteSize
+
+	for _, record := range p.records {
+		recordBytes := record.toBytes()
+		copy(buf[offset:], recordBytes)
+		offset += len(recordBytes)
+	}
 
 	// fileTrailer is from the end of the page.
 	copy(buf[config.PageSize-FileTrailerByteSize:], p.fileTrailer.toBytes())
 	endOffset := config.PageSize - FileTrailerByteSize
 
 	// directory is from the end of the page, before the file trailer.
-	copy(buf[:endOffset], p.directory.toBytes())
+	directoryBytes := p.directory.toBytes()
+	copy(buf[endOffset-len(directoryBytes):endOffset], directoryBytes)
 
 	return buf
 }
 
-func DataPageFromBytes(buf []byte) *DataPage {
+func (p *DataPage) String() string {
+	var buffer strings.Builder
+	buffer.WriteString("DataPage(")
+	buffer.WriteString(fmt.Sprintf("number=%v, ", p.PageNumber()))
+	buffer.WriteString(fmt.Sprintf("recordCount=%v, ", p.RecordCount()))
+	buffer.WriteString(fmt.Sprintf("records=%v)", p.Records()))
+	return buffer.String()
+}
+
+func DataPageFromBytes(buf []byte, schema *table.Schema) *DataPage {
 	page := &DataPage{}
 
 	offset := 0
@@ -132,7 +158,15 @@ func DataPageFromBytes(buf []byte) *DataPage {
 	page.pageHeader = pageHeaderFromBytes(buf[offset:])
 	offset += DataPageHeaderByteSize
 
-	page.directory = fromBytesDirectory(buf[offset:])
+	page.records = make([]*Record, 0)
+	for i := 0; i < int(page.pageHeader.recordCount); i++ {
+		record, recordSize := recordFromBytes(buf[offset:], schema)
+		page.records = append(page.records, record)
+		offset += recordSize
+	}
+
+	endOffset := config.PageSize - FileTrailerByteSize
+	page.directory = fromBytesDirectory(buf[endOffset-4 : endOffset])
 
 	page.fileTrailer = fileTrailerFromBytes()
 
@@ -143,6 +177,8 @@ func DataPageFromBytes(buf []byte) *DataPage {
 type pageHeader struct {
 	// whether the page is a leaf page.
 	isLeaf bool
+	// the number of records stored in the page.
+	recordCount uint16
 }
 
 func (h *pageHeader) toBytes() []byte {
@@ -152,11 +188,13 @@ func (h *pageHeader) toBytes() []byte {
 	} else {
 		buf[0] = 0
 	}
+	binary.LittleEndian.PutUint16(buf[1:], h.recordCount)
 	return buf
 }
 
 func pageHeaderFromBytes(buf []byte) *pageHeader {
 	return &pageHeader{
-		isLeaf: buf[0] == 1,
+		isLeaf:      buf[0] == 1,
+		recordCount: binary.LittleEndian.Uint16(buf[1:]),
 	}
 }

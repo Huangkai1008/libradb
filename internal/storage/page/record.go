@@ -1,12 +1,15 @@
 package page
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/Huangkai1008/libradb/internal/field"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
-type RecordType = rune
+type RecordType = uint8
 
 const RecordHeaderByteSize = 5
 
@@ -25,11 +28,9 @@ type Record struct {
 
 //nolint:unused // Ignore unused for now.
 type recordHeader struct {
-	// deleted is true if the record is deleted, cost 1 bit.
+	// deleted is true if the record is deleted, cost 1 byte.
 	deleted bool
-	// owned_number is the number of the record that owns the heap, cost 4 bits.
-	ownedNumber uint8
-	// recordType is the type of the record, cost 3 bits.
+	// recordType is the type of the record, cost 1 byte.
 	recordType RecordType
 	// heapNumber is the offset of the record in the page, cost 16 bits.
 	heapNumber uint16
@@ -39,7 +40,9 @@ type recordHeader struct {
 
 func NewRecord(values ...field.Value) *Record {
 	return &Record{
-		header: &recordHeader{},
+		header: &recordHeader{
+			deleted: false,
+		},
 		values: values,
 	}
 }
@@ -77,65 +80,80 @@ func (r *Record) Equal(other *Record) bool {
 	}
 
 	for i := range r.values {
-		if r.values[i] != other.values[i] {
+		if r.values[i].Compare(other.values[i]) != 0 {
 			return false
 		}
 	}
 	return true
 }
 
-// func (r *Record) ToBytes(s table.Schema) []byte {
-//	var header []byte
-//	// Variable length field length list stores the byte length of each variable length field.
-//	// Notes the null value of variable length field is not stored in the list.
-//	// The list is stored in reverse order.
-//	for i := s.Length() - 1; i >= 0; i-- {
-//		fieldType, fieldValue := s.FieldTypes[i], r.values[i]
-//		if field.IsVarLen(fieldType) && !field.IsNull(fieldValue) {
-//			maxLength := field.Length(fieldType)
-//			// Set `M` as the maximum character length of the field, and `L` as the actual byte length of the field.
-//			// If `M` is greater than 255 and `L` is greater than 127, the field length is stored in 2 bytes.
-//			// Otherwise, the field length is stored in 1 byte.
-//			byteSize := field.Bytesize(fieldValue)
-//			if maxLength*4 > 255 && byteSize > 127 {
-//				binary.LittleEndian.AppendUint16(header, uint16(byteSize))
-//			} else {
-//				header = append(header, byte(byteSize))
-//			}
-//		}
-//	}
-//
-//	// Null bitmap stores the null value of each field.
-//	// The null bitmap is stored in reverse order.
-//	// If the field allows NULL value, the corresponding bit is set to 1.
-//	// Otherwise, the corresponding bit is set to 0.
-//	// If all fields are not NULL, the null bitmap is not stored.
-//	nullBitmap := make([]byte, (s.Length()+7)/8)
-//	count := 0
-//	for i := s.Length() - 1; i >= 0; i-- {
-//		fieldType, fieldValue := s.FieldTypes[i], r.values[i]
-//		if fieldType.AllowNull() {
-//			if field.IsNull(fieldValue) {
-//				nullBitmap[count/8] |= 1 << (count % 8)
-//			}
-//			count++
-//		}
-//	}
-//	// Shrinks the null bitmap to the minimum size.
-//	if count > 0 {
-//		nullBitmap = nullBitmap[:count/8+1]
-//		header = append(header, nullBitmap...)
-//	}
-//
-//	// Record header part toke fixed 5 bytes.
-//	header = append(header, []byte{0, 0, 0, 0, 0}...)
-//
-//	buf := bytes.NewBuffer(nil)
-//	for _, fieldValue := range r.values {
-//		if !field.IsNull(fieldValue) {
-//			buf.Write(fieldValue.ToBytes())
-//		}
-//	}
-//
-//	return buf.Bytes()
-//}
+func (r *Record) Get(i int) field.Value {
+	return r.values[i]
+}
+
+func (r *Record) Values() []field.Value {
+	return r.values
+}
+
+func (r *Record) GetKey() field.Value {
+	return r.values[0]
+}
+
+func (r *Record) String() string {
+	return fmt.Sprintf("%v", r.values)
+}
+
+func (r *Record) toBytes() []byte {
+	// Record header part toke fixed 5 bytes.
+	header := make([]byte, RecordHeaderByteSize)
+	if r.header.deleted {
+		header[0] = 1
+	}
+
+	// Store variable length field byte size.
+	for _, fieldValue := range r.values {
+		if field.IsVarLen(fieldValue.Type()) {
+			header = binary.LittleEndian.AppendUint32(header, uint32(len(fieldValue.ToBytes())))
+		}
+	}
+
+	buf := bytes.NewBuffer(header)
+	for _, fieldValue := range r.values {
+		if !field.IsNull(fieldValue) {
+			buf.Write(fieldValue.ToBytes())
+		}
+	}
+
+	return buf.Bytes()
+}
+
+func recordFromBytes(buf []byte, schema *table.Schema) (*Record, int) {
+	offset := 0
+	header := &recordHeader{
+		deleted: buf[0] == 1,
+	}
+	offset += RecordHeaderByteSize
+
+	// Get the variable length field byte size.
+	fieldTypes := schema.FieldTypes
+	varLenFieldSizes := make([]uint32, len(fieldTypes))
+	for i, fieldType := range fieldTypes {
+		if field.IsVarLen(fieldType) {
+			varLenFieldSizes[i] = binary.LittleEndian.Uint32(buf[offset:])
+			offset += 4
+		}
+	}
+
+	values := make([]field.Value, len(fieldTypes))
+	for i, fieldType := range fieldTypes {
+		if field.IsVarLen(fieldType) {
+			values[i], _ = field.FromBytes(fieldType, buf[offset:offset+int(varLenFieldSizes[i])])
+			offset += int(varLenFieldSizes[i])
+		} else {
+			byteSize := fieldTypes[i].ByteSize()
+			values[i], _ = field.FromBytes(fieldType, buf[offset:offset+byteSize])
+			offset += byteSize
+		}
+	}
+	return &Record{header: header, values: values}, offset
+}

@@ -24,7 +24,7 @@ const InvalidPageNumber = 0
 type Number uint32
 
 func NewNumber() Number {
-	n, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	n, _ := rand.Int(rand.Reader, big.NewInt(math.MaxUint32))
 	return Number(n.Uint64())
 }
 

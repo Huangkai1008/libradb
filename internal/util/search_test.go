@@ -33,6 +33,31 @@ func (s test) String() string {
 	return strconv.Itoa(s.value)
 }
 
+func TestFindIndex(t *testing.T) {
+	var tests = []struct {
+		v        test
+		items    []test
+		expected int
+	}{
+		{test{25}, testsSlice([]int{25, 50, 60, 75}), 0},
+		{test{28}, testsSlice([]int{25, 50, 60, 75}), -1},
+		{test{50}, testsSlice([]int{25, 50, 60, 75}), 1},
+		{test{55}, testsSlice([]int{25, 50, 60, 75}), -1},
+		{test{60}, testsSlice([]int{25, 50, 60, 75}), 2},
+		{test{75}, testsSlice([]int{25, 50, 60, 75}), 3},
+		{test{100}, testsSlice([]int{25, 50, 60, 75}), -1},
+		{test{0}, testsSlice([]int{25, 50, 60, 75}), -1},
+		{test{-1}, testsSlice([]int{25, 50, 60, 75}), -1},
+		{test{10000}, testsSlice([]int{25, 50, 60, 75}), -1},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			actual := util.FindIndex(tt.v, tt.items)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestSearchIndex(t *testing.T) {
 	var tests = []struct {
 		v        test

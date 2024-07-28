@@ -48,6 +48,7 @@ func TestVarcharValue_ToBytes(t *testing.T) {
 		{"好的", 2},
 		{"hello world", 11},
 		{"你好，世界", 5},
+		{"David", 5},
 	}
 	for _, tt := range tests {
 		t.Run(tt.val, func(t *testing.T) {
@@ -57,7 +58,7 @@ func TestVarcharValue_ToBytes(t *testing.T) {
 			newV, err := field.FromBytes(typ, bytes)
 
 			require.NoError(t, err)
-			assert.Len(t, bytes, field.Bytesize(v))
+			assert.Len(t, bytes, field.ByteSize(v))
 			assert.Equal(t, v.Val(), newV.Val())
 		})
 	}

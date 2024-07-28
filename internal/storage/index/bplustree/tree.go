@@ -17,6 +17,7 @@ import (
 // The entries within each node must be sorted.
 type Metadata struct {
 	Order        uint32
+	Schema       *table.Schema
 	tableSpaceID table.SpaceID
 	// rootPageNumber cannot be changed.
 	rootPageNumber page.Number
@@ -75,13 +76,15 @@ func (tree *BPlusTree) Put(key Key, record *page.Record) error {
 		return nil
 	}
 
-	keys := []Key{pair.Key()}
-	children := []page.Number{tree.root.PageNumber(), pair.Value()}
-	root, err1 := NewInnerNode(
-		tree.meta, tree.bufferManager, WithInnerKeys(keys), WithChildren(children),
+	records := []*page.Record{
+		newIndexRecord(pair.Key(), tree.root.PageNumber()),
+		newIndexRecord(pair.Key(), pair.Value()),
+	}
+	root, nodeError := NewInnerNode(
+		tree.meta, tree.bufferManager, WithIndexRecords(records),
 	)
-	if err1 != nil {
-		return err1
+	if nodeError != nil {
+		return nodeError
 	}
 	return tree.updateRoot(root)
 }

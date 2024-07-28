@@ -33,17 +33,20 @@ func NewLeafNode(
 	buffManager memory.BufferManager,
 	options ...LeafNodeOption,
 ) (*LeafNode, error) {
+	threshold := meta.Order * 2 //nolint:mnd // a threshold is the maximum number of keys in the leaf node.
 	node := &LeafNode{
 		meta:          meta,
 		page:          page.NewDataPage(true),
 		bufferManager: buffManager,
+		keys:          make([]Key, 0, threshold),
 	}
 
+	applyLeafNodeOptions(node, options...)
 	err := buffManager.ApplyNewPage(meta.tableSpaceID, node.page)
 	if err != nil {
 		return nil, err
 	}
-	applyLeafNodeOptions(node, options...)
+
 	if err = node.sync(); err != nil {
 		return nil, err
 	}
@@ -69,15 +72,12 @@ func WithLeafNext(next page.Number) LeafNodeOption {
 	}
 }
 
-func WithLeafPage(page *page.DataPage) LeafNodeOption {
-	return func(node *LeafNode) {
-		node.page = page
-	}
-}
-
 func WithDataRecords(records []*page.Record) LeafNodeOption {
 	return func(node *LeafNode) {
 		node.page.SetRecords(records)
+		for _, record := range records {
+			node.keys = append(node.keys, record.GetKey())
+		}
 	}
 }
 
@@ -97,7 +97,8 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 
 	insertIndex := util.InsertIndex(key, node.keys)
 	node.keys = slices.Insert(node.keys, insertIndex, key)
-	node.page.SetRecords(slices.Insert(node.page.Records(), insertIndex, record))
+
+	node.insertRecord(insertIndex, record)
 
 	if !node.isOverflowed() {
 		if err := node.sync(); err != nil {
@@ -108,8 +109,8 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 
 	// When the leaf splits, it returns the first entry in the right node as the split key.
 	// `d` entries remain in the left node; `d + 1` entries are moved to the right node.
-	rightKeys := node.keys[node.meta.Order:]
-	rightRecords := node.page.Records()[node.meta.Order:]
+	rightKeys := append([]Key{}, node.keys[node.meta.Order:]...)
+	rightRecords := append([]*page.Record{}, node.page.Records()[node.meta.Order:]...)
 	rightNode, err := NewLeafNode(
 		node.meta,
 		node.bufferManager,
@@ -122,8 +123,8 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 	}
 
 	node.keys = node.keys[:node.meta.Order]
-	node.page.SetNext(rightNode.page.PageNumber())
 	node.page.SetRecords(node.page.Records()[:node.meta.Order])
+	node.page.SetNext(rightNode.page.PageNumber())
 	if err = node.sync(); err != nil {
 		return nil, err
 	}
@@ -140,6 +141,24 @@ func (node *LeafNode) PageNumber() page.Number {
 	return node.page.PageNumber()
 }
 
+func leafNodeFromPage(
+	meta *Metadata,
+	buffManager memory.BufferManager,
+	p *page.DataPage,
+) *LeafNode {
+	node := &LeafNode{
+		meta:          meta,
+		page:          p,
+		bufferManager: buffManager,
+	}
+
+	for _, record := range node.page.Records() {
+		node.keys = append(node.keys, record.GetKey())
+	}
+
+	return node
+}
+
 func (node *LeafNode) sync() error {
 	return nil
 }
@@ -154,7 +173,7 @@ func (node *LeafNode) isOverflowed() bool {
 }
 
 func (node *LeafNode) GetRecord(key Key) *page.Record {
-	index := slices.Index(node.keys, key)
+	index := util.FindIndex(key, node.keys)
 	if index == -1 {
 		return nil
 	}
@@ -162,11 +181,16 @@ func (node *LeafNode) GetRecord(key Key) *page.Record {
 	return node.page.Records()[index]
 }
 
+func (node *LeafNode) insertRecord(index int, record *page.Record) {
+	node.page.SetRecords(slices.Insert(node.page.Records(), index, record))
+}
+
 func (node *LeafNode) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("LeafNode(")
 	buffer.WriteString(fmt.Sprintf("keys=%v, ", node.keys))
-	buffer.WriteString(fmt.Sprintf("rids=%v  ", node.page.Records()))
+	buffer.WriteString(fmt.Sprintf("records=%v  ", node.page.Records()))
+	buffer.WriteString(fmt.Sprintf("page=%d, ", node.page.PageNumber()))
 	buffer.WriteString(fmt.Sprintf("prev=%d, ", node.page.PrevPageNumber()))
 	buffer.WriteString(fmt.Sprintf("next=%d)", node.page.NextPageNumber()))
 	return buffer.String()
