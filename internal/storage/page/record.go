@@ -99,14 +99,6 @@ func (r *Record) String() string {
 	return fmt.Sprintf("%v", r.values)
 }
 
-func (r *Record) next() *Record {
-	return r.header.nextRecord
-}
-
-func (r *Record) setNext(next *Record) {
-	r.header.nextRecord = next
-}
-
 func (r *Record) toBytes() []byte {
 	// Record header part toke fixed 5 bytes.
 	header := make([]byte, RecordHeaderByteSize)

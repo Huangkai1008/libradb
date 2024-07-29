@@ -1,9 +1,10 @@
 package ds_test
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"testing"
+
+	. "github.com/onsi/ginkgo/v2" //nolint:revive  // ginkgo
+	. "github.com/onsi/gomega"    //nolint:revive  // ginkgo
 
 	"github.com/Huangkai1008/libradb/pkg/ds"
 )

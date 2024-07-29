@@ -77,7 +77,9 @@ func WithInnerNext(next page.Number) InnerNodeOption {
 
 func WithIndexRecords(records []*page.Record) InnerNodeOption {
 	return func(node *InnerNode) {
-		node.page.SetRecords(records)
+		for _, record := range records {
+			node.page.Append(record)
+		}
 		for i, record := range records {
 			if i > 0 {
 				node.keys = append(node.keys, record.GetKey())
@@ -137,7 +139,7 @@ func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
 	// and the last d entries are moved to the right node.
 	// The middle key is moved up to the parent node.
 	splitKey = node.keys[node.meta.Order]
-	rightRecords := append([]*page.Record{}, node.page.Records()[node.meta.Order:]...)
+	rightRecords := node.page.Shrink(node.meta.Order)
 	rightNode, err := NewInnerNode(
 		node.meta,
 		node.bufferManager,
@@ -151,7 +153,6 @@ func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
 
 	node.keys = node.keys[:node.meta.Order]
 	node.children = node.children[:node.meta.Order+1]
-	node.page.SetRecords(node.page.Records()[:node.meta.Order])
 	node.page.SetPrev(rightNode.page.PageNumber())
 	if err = node.sync(); err != nil {
 		return nil, err
@@ -175,15 +176,15 @@ func innerNodeFromPage(
 		bufferManager: buffManager,
 	}
 
-	for i, record := range node.page.Records() {
+	recordCount := node.page.RecordCount()
+	for i := uint16(0); i < recordCount; i++ {
+		record := node.page.Get(i)
 		if i > 0 {
 			node.keys = append(node.keys, record.GetKey())
 		}
-
 		val := record.Get(1).Val()
 		node.children = append(node.children, page.Number(val.(int32)))
 	}
-
 	return node
 }
 
@@ -192,7 +193,7 @@ func (node *InnerNode) getChild(index int) page.Number {
 }
 
 func (node *InnerNode) insertRecord(index int, record *page.Record) {
-	node.page.SetRecords(slices.Insert(node.page.Records(), index, record))
+	node.page.Insert(uint16(index), record)
 }
 
 func (node *InnerNode) String() string {

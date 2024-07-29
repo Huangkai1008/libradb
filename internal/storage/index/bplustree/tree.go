@@ -5,6 +5,9 @@
 package bplustree
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
@@ -16,7 +19,7 @@ import (
 // (it’s possible for leaf nodes to end up with < Order entries if you delete data).
 // The entries within each node must be sorted.
 type Metadata struct {
-	Order        uint32
+	Order        uint16
 	Schema       *table.Schema
 	tableSpaceID table.SpaceID
 	// rootPageNumber cannot be changed.
@@ -87,6 +90,14 @@ func (tree *BPlusTree) Put(key Key, record *page.Record) error {
 		return nodeError
 	}
 	return tree.updateRoot(root)
+}
+
+func (tree *BPlusTree) String() string {
+	var buffer strings.Builder
+	buffer.WriteString("BPlusTree(")
+	buffer.WriteString(fmt.Sprintf("root=%v", tree.root))
+	buffer.WriteString(")")
+	return buffer.String()
 }
 
 func (tree *BPlusTree) updateRoot(newRoot BPlusNode) error {

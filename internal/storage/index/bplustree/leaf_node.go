@@ -74,7 +74,9 @@ func WithLeafNext(next page.Number) LeafNodeOption {
 
 func WithDataRecords(records []*page.Record) LeafNodeOption {
 	return func(node *LeafNode) {
-		node.page.SetRecords(records)
+		for _, record := range records {
+			node.page.Append(record)
+		}
 		for _, record := range records {
 			node.keys = append(node.keys, record.GetKey())
 		}
@@ -110,7 +112,7 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 	// When the leaf splits, it returns the first entry in the right node as the split key.
 	// `d` entries remain in the left node; `d + 1` entries are moved to the right node.
 	rightKeys := append([]Key{}, node.keys[node.meta.Order:]...)
-	rightRecords := append([]*page.Record{}, node.page.Records()[node.meta.Order:]...)
+	rightRecords := node.page.Shrink(node.meta.Order)
 	rightNode, err := NewLeafNode(
 		node.meta,
 		node.bufferManager,
@@ -123,7 +125,6 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 	}
 
 	node.keys = node.keys[:node.meta.Order]
-	node.page.SetRecords(node.page.Records()[:node.meta.Order])
 	node.page.SetNext(rightNode.page.PageNumber())
 	if err = node.sync(); err != nil {
 		return nil, err
@@ -135,6 +136,16 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 		value: rightNode.page.PageNumber(),
 	}
 	return pair, nil
+}
+
+func (node *LeafNode) Delete(key Key) error {
+	index := util.FindIndex(key, node.keys)
+	if index == -1 {
+		return nil
+	}
+
+	node.keys = append(node.keys[:index], node.keys[index+1:]...)
+	return nil
 }
 
 func (node *LeafNode) PageNumber() page.Number {
@@ -152,7 +163,7 @@ func leafNodeFromPage(
 		bufferManager: buffManager,
 	}
 
-	for _, record := range node.page.Records() {
+	for _, record := range node.records() {
 		node.keys = append(node.keys, record.GetKey())
 	}
 
@@ -163,7 +174,7 @@ func (node *LeafNode) sync() error {
 	return nil
 }
 
-func (node *LeafNode) Order() uint32 {
+func (node *LeafNode) Order() uint16 {
 	return node.meta.Order
 }
 
@@ -178,18 +189,27 @@ func (node *LeafNode) GetRecord(key Key) *page.Record {
 		return nil
 	}
 
-	return node.page.Records()[index]
+	return node.page.Get(uint16(index))
 }
 
 func (node *LeafNode) insertRecord(index int, record *page.Record) {
-	node.page.SetRecords(slices.Insert(node.page.Records(), index, record))
+	node.page.Insert(uint16(index), record)
+}
+
+func (node *LeafNode) records() []*page.Record {
+	recordCount := node.page.RecordCount()
+	records := make([]*page.Record, recordCount)
+	for i := uint16(0); i < recordCount; i++ {
+		records[i] = node.page.Get(i)
+	}
+	return records
 }
 
 func (node *LeafNode) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("LeafNode(")
 	buffer.WriteString(fmt.Sprintf("keys=%v, ", node.keys))
-	buffer.WriteString(fmt.Sprintf("records=%v  ", node.page.Records()))
+	buffer.WriteString(fmt.Sprintf("records=%v  ", node.records()))
 	buffer.WriteString(fmt.Sprintf("page=%d, ", node.page.PageNumber()))
 	buffer.WriteString(fmt.Sprintf("prev=%d, ", node.page.PrevPageNumber()))
 	buffer.WriteString(fmt.Sprintf("next=%d)", node.page.NextPageNumber()))

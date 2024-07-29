@@ -94,6 +94,20 @@ func (p *DataPage) Delete(index uint16) *Record {
 	return removed
 }
 
+// Shrink removes all the records start from endIndex and return them.
+func (p *DataPage) Shrink(endIndex uint16) []*Record {
+	recordCount := p.RecordCount()
+	if endIndex >= recordCount {
+		return []*Record{}
+	}
+
+	records := make([]*Record, recordCount-endIndex)
+	for i, j := 0, endIndex; j < recordCount; i, j = i+1, j+1 {
+		records[i] = p.Delete(endIndex)
+	}
+	return records
+}
+
 func (p *DataPage) RecordCount() uint16 {
 	return p.pageHeader.recordCount
 }

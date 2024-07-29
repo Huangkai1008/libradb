@@ -36,7 +36,6 @@ type BPlusNode interface {
 	// it returns the key and page number of the new node.
 	// Otherwise, it returns nil.
 	Put(key Key, record *page.Record) (*Pair, error)
-
 	// PageNumber returns the page number of the page underlying the node.
 	PageNumber() page.Number
 
