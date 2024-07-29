@@ -162,5 +162,27 @@ func (suite *BPlusTreeTestSuite) TestBPlusTreePut() {
 		value, err = tree.Get(field.NewValue(pkType, 3))
 		suite.Require().NoError(err)
 		suite.Equal(page.NewRecordFromLiteral(3, "Grace", 26, true, 60.5), value)
+
+		//            (4 7)
+		//           /  |  \
+		//   (3)      (6)       (8)
+		//  /   \    /   \    /   \
+		// (2) (3) (4 5) (6) (7) (8 9)
+		err = tree.Put(field.NewValue(pkType, 5), page.NewRecordFromLiteral(5, "Bob", 22, true, 80.5))
+		suite.Require().NoError(err)
+		value, err = tree.Get(field.NewValue(pkType, 5))
+		suite.Require().NoError(err)
+		suite.Equal(page.NewRecordFromLiteral(5, "Bob", 22, true, 80.5), value)
+
+		//            (4 7)
+		//           /  |  \
+		//    (3)      (6)       (8)
+		//   /   \    /   \    /   \
+		// (1 2) (3) (4 5) (6) (7) (8 9)
+		err = tree.Put(field.NewValue(pkType, 1), page.NewRecordFromLiteral(1, "Smith", 68, true, 78))
+		suite.Require().NoError(err)
+		value, err = tree.Get(field.NewValue(pkType, 1))
+		suite.Require().NoError(err)
+		suite.Equal(page.NewRecordFromLiteral(1, "Smith", 68, true, 78), value)
 	})
 }
