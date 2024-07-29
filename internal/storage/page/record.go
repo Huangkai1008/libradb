@@ -34,8 +34,8 @@ type recordHeader struct {
 	recordType RecordType
 	// heapNumber is the offset of the record in the page, cost 16 bits.
 	heapNumber uint16
-	// nextRecordOffset is the offset of the next record in the page, cost 16 bits.
-	nextRecordOffset int16
+	// nextRecord point to the next record.
+	nextRecord *Record
 }
 
 func NewRecord(values ...field.Value) *Record {
@@ -91,16 +91,20 @@ func (r *Record) Get(i int) field.Value {
 	return r.values[i]
 }
 
-func (r *Record) Values() []field.Value {
-	return r.values
-}
-
 func (r *Record) GetKey() field.Value {
 	return r.values[0]
 }
 
 func (r *Record) String() string {
 	return fmt.Sprintf("%v", r.values)
+}
+
+func (r *Record) next() *Record {
+	return r.header.nextRecord
+}
+
+func (r *Record) setNext(next *Record) {
+	r.header.nextRecord = next
 }
 
 func (r *Record) toBytes() []byte {

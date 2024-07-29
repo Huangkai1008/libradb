@@ -3,11 +3,11 @@ package page
 import (
 	"encoding/binary"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/config"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
+	"github.com/Huangkai1008/libradb/pkg/ds"
 )
 
 const (
@@ -15,22 +15,17 @@ const (
 	InfimumHeaderSize      = 5
 	InfimumByteSize        = 13
 	SupremumHeaderSize     = 5
-	SupremumByteSize       = 13
-)
-
-const (
-	InfimumValue  = 0
-	SupremumValue = math.MaxUint64
 )
 
 // DataPage is the page that stores data.
 // DatePage implements by the heap file.
 type DataPage struct {
-	fileHeader  *fileHeader
-	pageHeader  *pageHeader
-	records     []*Record
-	directory   *directory
-	fileTrailer *fileTrailer
+	fileHeader *fileHeader
+	pageHeader *pageHeader
+	// infimumRecord point to the dummy head of the records.
+	infimumRecord ds.LinkedList[*Record]
+	directory     *directory
+	fileTrailer   *fileTrailer
 }
 
 func NewDataPage(isLeaf bool) *DataPage {
@@ -39,8 +34,9 @@ func NewDataPage(isLeaf bool) *DataPage {
 		pageHeader: &pageHeader{
 			isLeaf: isLeaf,
 		},
-		directory:   newDirectory(),
-		fileTrailer: &fileTrailer{},
+		infimumRecord: ds.NewDLL[*Record](),
+		directory:     newDirectory(),
+		fileTrailer:   &fileTrailer{},
 	}
 	return p
 }
@@ -77,16 +73,29 @@ func (p *DataPage) SetNext(nextPageNumber Number) {
 	p.fileHeader.nextPageNumber = nextPageNumber
 }
 
-func (p *DataPage) Records() []*Record {
-	return p.records
+func (p *DataPage) Get(index uint16) *Record {
+	return p.infimumRecord.Get(int(index))
 }
 
-func (p *DataPage) SetRecords(records []*Record) {
-	p.records = records
+func (p *DataPage) Insert(index uint16, record *Record) {
+	p.infimumRecord.Insert(int(index), record)
+	p.pageHeader.recordCount++
 }
 
-func (p *DataPage) RecordCount() int {
-	return len(p.records)
+func (p *DataPage) Append(record *Record) {
+	p.infimumRecord.Append(record)
+	p.pageHeader.recordCount++
+}
+
+// Delete records with given index and returns the record.
+func (p *DataPage) Delete(index uint16) *Record {
+	removed := p.infimumRecord.Remove(int(index))
+	p.pageHeader.recordCount--
+	return removed
+}
+
+func (p *DataPage) RecordCount() uint16 {
+	return p.pageHeader.recordCount
 }
 
 // ToBytes converts the data page to a byte slice.
@@ -118,11 +127,11 @@ func (p *DataPage) ToBytes() []byte {
 	copy(buf[offset:], p.fileHeader.toBytes())
 	offset += FileHeaderByteSize
 
-	p.pageHeader.recordCount = uint16(len(p.records))
 	copy(buf[offset:], p.pageHeader.toBytes())
 	offset += DataPageHeaderByteSize
 
-	for _, record := range p.records {
+	for i := uint16(0); i < p.RecordCount(); i++ {
+		record := p.infimumRecord.Get(int(i))
 		recordBytes := record.toBytes()
 		copy(buf[offset:], recordBytes)
 		offset += len(recordBytes)
@@ -139,17 +148,8 @@ func (p *DataPage) ToBytes() []byte {
 	return buf
 }
 
-func (p *DataPage) String() string {
-	var buffer strings.Builder
-	buffer.WriteString("DataPage(")
-	buffer.WriteString(fmt.Sprintf("number=%v, ", p.PageNumber()))
-	buffer.WriteString(fmt.Sprintf("recordCount=%v, ", p.RecordCount()))
-	buffer.WriteString(fmt.Sprintf("records=%v)", p.Records()))
-	return buffer.String()
-}
-
 func DataPageFromBytes(buf []byte, schema *table.Schema) *DataPage {
-	page := &DataPage{}
+	page := NewDataPage(true)
 
 	offset := 0
 	page.fileHeader = fileHeaderFromBytes(buf[offset:])
@@ -158,12 +158,13 @@ func DataPageFromBytes(buf []byte, schema *table.Schema) *DataPage {
 	page.pageHeader = pageHeaderFromBytes(buf[offset:])
 	offset += DataPageHeaderByteSize
 
-	page.records = make([]*Record, 0)
-	for i := 0; i < int(page.pageHeader.recordCount); i++ {
+	recordCount := page.RecordCount()
+	for i := uint16(0); i < recordCount; i++ {
 		record, recordSize := recordFromBytes(buf[offset:], schema)
-		page.records = append(page.records, record)
+		page.Insert(i, record)
 		offset += recordSize
 	}
+	page.pageHeader.recordCount = recordCount
 
 	endOffset := config.PageSize - FileTrailerByteSize
 	page.directory = fromBytesDirectory(buf[endOffset-4 : endOffset])
@@ -171,6 +172,14 @@ func DataPageFromBytes(buf []byte, schema *table.Schema) *DataPage {
 	page.fileTrailer = fileTrailerFromBytes()
 
 	return page
+}
+
+func (p *DataPage) String() string {
+	var buffer strings.Builder
+	buffer.WriteString("DataPage(")
+	buffer.WriteString(fmt.Sprintf("number=%v, ", p.PageNumber()))
+	buffer.WriteString(fmt.Sprintf("recordCount=%v) ", p.RecordCount()))
+	return buffer.String()
 }
 
 // pageHeader stores the status information of records stored in a data page.

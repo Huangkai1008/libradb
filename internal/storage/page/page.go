@@ -19,7 +19,7 @@ const (
 	FileTrailerByteSize = 8
 )
 
-const InvalidPageNumber = 0
+const InvalidPageNumber = Number(0)
 
 type Number uint32
 

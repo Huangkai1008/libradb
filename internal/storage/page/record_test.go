@@ -2,7 +2,6 @@ package page_test
 
 import (
 	"fmt"
-
 	"testing"
 
 	"github.com/Huangkai1008/libradb/internal/storage/page"
@@ -30,7 +29,7 @@ func TestRecord_Equal(t *testing.T) {
 		}
 	})
 
-	t.Run("should equal if record values is empty", func(t *testing.T) {
+	t.Run("should equal if records values is empty", func(t *testing.T) {
 		record1 := page.NewRecord()
 		record2 := page.NewRecord()
 
@@ -39,7 +38,7 @@ func TestRecord_Equal(t *testing.T) {
 		assert.True(t, equality)
 	})
 
-	t.Run("should equal if record values are equal", func(t *testing.T) {
+	t.Run("should equal if records values are equal", func(t *testing.T) {
 		var tests = []struct {
 			record1 *page.Record
 			record2 *page.Record
@@ -66,4 +65,38 @@ func TestRecord_Equal(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestRecord_Get(t *testing.T) {
+	var tests = []struct {
+		record   *page.Record
+		index    int
+		expected any
+	}{
+		{page.NewRecordFromLiteral(1, "Hello"), 0, 1},
+		{page.NewRecordFromLiteral(1, "Hello"), 1, "Hello"},
+		{page.NewRecordFromLiteral(1, "Hello", "Hello1"), 2, "Hello1"},
+	}
+
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			assert.EqualValues(t, test.expected, test.record.Get(test.index).Val())
+		})
+	}
+}
+func TestRecord_GetKey(t *testing.T) {
+	var tests = []struct {
+		record   *page.Record
+		expected any
+	}{
+		{page.NewRecordFromLiteral(1, "Hello"), 1},
+		{page.NewRecordFromLiteral(2, "Hello"), 2},
+		{page.NewRecordFromLiteral(1, "Hello", "Hello1"), 1},
+	}
+
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			assert.EqualValues(t, test.expected, test.record.GetKey().Val())
+		})
+	}
 }
