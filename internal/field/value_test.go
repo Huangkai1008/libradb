@@ -36,6 +36,30 @@ func TestIntegerValue_ToBytes(t *testing.T) {
 	}
 }
 
+func TestIntegerValue_Compare(t *testing.T) {
+	typ := field.NewInteger()
+	var tests = []struct {
+		val1     int
+		val2     int
+		expected bool
+	}{
+		{0, 1, false},
+		{-1, 1, false},
+		{0, 0, true},
+		{math.MinInt32, math.MinInt32, true},
+		{1000, 1000, true},
+	}
+
+	for _, tt := range tests {
+		v1 := field.NewValue(typ, tt.val1)
+		v2 := field.NewValue(typ, tt.val2)
+
+		equality := v1.Compare(v2) == 0
+
+		assert.Equal(t, tt.expected, equality)
+	}
+}
+
 func TestVarcharValue_ToBytes(t *testing.T) {
 	typ := field.NewVarchar()
 	var tests = []struct {
@@ -64,6 +88,29 @@ func TestVarcharValue_ToBytes(t *testing.T) {
 	}
 }
 
+func TestVarcharValue_Compare(t *testing.T) {
+	typ := field.NewVarchar()
+	var tests = []struct {
+		val1     string
+		val2     string
+		expected bool
+	}{
+		{"Hello World", "Hello World", true},
+		{"Hello World1", "Hello World", false},
+		{"", "", true},
+		{"a", "a", true},
+		{"ab", "ab", true},
+	}
+	for _, tt := range tests {
+		v1 := field.NewValue(typ, tt.val1)
+		v2 := field.NewValue(typ, tt.val2)
+
+		equality := v1.Compare(v2) == 0
+
+		assert.Equal(t, tt.expected, equality)
+	}
+}
+
 func TestBooleanValue_ToBytes(t *testing.T) {
 	typ := field.NewBoolean()
 	var tests = []struct {
@@ -84,6 +131,30 @@ func TestBooleanValue_ToBytes(t *testing.T) {
 			assert.Len(t, bytes, 1)
 			assert.Equal(t, v.Val(), newV.Val())
 		})
+	}
+}
+
+func TestBooleanValue_Compare(t *testing.T) {
+	typ := field.NewBoolean()
+	var tests = []struct {
+		val1     bool
+		val2     bool
+		expected bool
+	}{
+		{true, true, true},
+		{false, true, false},
+		{true, false, false},
+		{false, true, false},
+		{false, false, true},
+	}
+
+	for _, tt := range tests {
+		v1 := field.NewValue(typ, tt.val1)
+		v2 := field.NewValue(typ, tt.val2)
+
+		equality := v1.Compare(v2) == 0
+
+		assert.Equal(t, tt.expected, equality)
 	}
 }
 
@@ -110,5 +181,29 @@ func TestFloatValue_ToBytes(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, bytes, 4)
 		assert.Equal(t, v.Val(), newV.Val())
+	}
+}
+
+func TestFloatValue_Compare(t *testing.T) {
+	typ := field.NewFloat()
+	var tests = []struct {
+		val1     float64
+		val2     float64
+		expected bool
+	}{
+		{0.0, 1.0, false},
+		{-1.0, 1, false},
+		{0.0, 0, true},
+		{0.0, 1.0, false},
+		{-1.0, 1.0, false},
+	}
+
+	for _, tt := range tests {
+		v1 := field.NewValue(typ, tt.val1)
+		v2 := field.NewValue(typ, tt.val2)
+
+		equality := v1.Compare(v2) == 0
+
+		assert.Equal(t, tt.expected, equality)
 	}
 }
