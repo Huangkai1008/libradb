@@ -139,7 +139,7 @@ func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
 	// and the last d entries are moved to the right node.
 	// The middle key is moved up to the parent node.
 	splitKey = node.keys[node.meta.Order]
-	rightRecords := node.page.Shrink(node.meta.Order)
+	rightRecords := node.page.Shrink(node.meta.Order + 1)
 	rightNode, err := NewInnerNode(
 		node.meta,
 		node.bufferManager,
@@ -159,6 +159,15 @@ func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
 	}
 
 	return &Pair{key: splitKey, value: rightNode.page.PageNumber()}, nil
+}
+
+func (node *InnerNode) Delete(key Key) error {
+	leafNode, err := node.Get(key)
+	if err != nil {
+		return err
+	}
+
+	return leafNode.Delete(key)
 }
 
 func (node *InnerNode) PageNumber() page.Number {

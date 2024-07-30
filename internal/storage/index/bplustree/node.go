@@ -36,6 +36,11 @@ type BPlusNode interface {
 	// it returns the key and page number of the new node.
 	// Otherwise, it returns nil.
 	Put(key Key, record *page.Record) (*Pair, error)
+	// Delete the key and its corresponding record from the subtree rooted by node,
+	// or does nothing if the key is not in the subtree.
+	// Note, delete not re-balance the tree, delete the key and record simply.
+	Delete(key Key) error
+
 	// PageNumber returns the page number of the page underlying the node.
 	PageNumber() page.Number
 

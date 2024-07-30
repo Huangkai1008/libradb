@@ -92,6 +92,10 @@ func (tree *BPlusTree) Put(key Key, record *page.Record) error {
 	return tree.updateRoot(root)
 }
 
+func (tree *BPlusTree) Delete(key Key) error {
+	return tree.root.Delete(key)
+}
+
 func (tree *BPlusTree) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("BPlusTree(")

@@ -145,6 +145,7 @@ func (node *LeafNode) Delete(key Key) error {
 	}
 
 	node.keys = append(node.keys[:index], node.keys[index+1:]...)
+	node.page.Delete(uint16(index))
 	return nil
 }
 

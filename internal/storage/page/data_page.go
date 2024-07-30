@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/config"
+	"github.com/Huangkai1008/libradb/internal/field"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"github.com/Huangkai1008/libradb/pkg/ds"
 )
@@ -112,6 +113,19 @@ func (p *DataPage) RecordCount() uint16 {
 	return p.pageHeader.recordCount
 }
 
+func (p *DataPage) keys() []field.Value {
+	recordCount := p.RecordCount()
+	keys := make([]field.Value, recordCount)
+	for i := uint16(0); i < recordCount; i++ {
+		keys[i] = p.Get(i).GetKey()
+	}
+	if p.IsLeaf() {
+		return keys
+	}
+
+	return keys[1:]
+}
+
 // ToBytes converts the data page to a byte slice.
 //
 // The page format is inspired by the InnoDB page format,
@@ -192,7 +206,8 @@ func (p *DataPage) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("DataPage(")
 	buffer.WriteString(fmt.Sprintf("number=%v, ", p.PageNumber()))
-	buffer.WriteString(fmt.Sprintf("recordCount=%v) ", p.RecordCount()))
+	buffer.WriteString(fmt.Sprintf("recordCount=%v ", p.RecordCount()))
+	buffer.WriteString(fmt.Sprintf("keys=%v)", p.keys()))
 	return buffer.String()
 }
 
