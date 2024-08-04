@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"math"
 	"math/big"
+
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type Type = uint16
@@ -36,6 +38,15 @@ type Page interface {
 	PageNumber() Number
 	// Buffer returns the byte slice of the page.
 	Buffer() []byte
+}
+
+func FromBytes(buf []byte, s *table.Schema) Page {
+	header := fileHeaderFromBytes(buf)
+	if header.pageType == DataPageType {
+		return DataPageFromBytes(buf, s)
+	}
+
+	panic("Invalid page type")
 }
 
 // fileHeader represents the header of a file.

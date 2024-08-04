@@ -47,15 +47,14 @@ func NewBPlusTree(meta *Metadata, bufferManager memory.BufferManager) (*BPlusTre
 	if err != nil {
 		return nil, err
 	}
-
-	meta.incrHeight()
-	meta.rootPageNumber = root.page.PageNumber()
+	defer root.unpin(true)
 
 	tree := &BPlusTree{
 		meta:          meta,
 		root:          root,
 		bufferManager: bufferManager,
 	}
+	tree.updateRoot(root)
 
 	return tree, nil
 }
@@ -66,7 +65,9 @@ func (tree *BPlusTree) Get(key Key) (*page.Record, error) {
 		return nil, err
 	}
 
-	return leafNode.GetRecord(key), nil
+	record := leafNode.GetRecord(key)
+	leafNode.unpin(false)
+	return record, nil
 }
 
 func (tree *BPlusTree) Put(key Key, record *page.Record) error {
@@ -89,7 +90,10 @@ func (tree *BPlusTree) Put(key Key, record *page.Record) error {
 	if nodeError != nil {
 		return nodeError
 	}
-	return tree.updateRoot(root)
+
+	root.unpin(true)
+	tree.updateRoot(root)
+	return nil
 }
 
 func (tree *BPlusTree) Delete(key Key) error {
@@ -104,9 +108,8 @@ func (tree *BPlusTree) String() string {
 	return buffer.String()
 }
 
-func (tree *BPlusTree) updateRoot(newRoot BPlusNode) error {
+func (tree *BPlusTree) updateRoot(newRoot BPlusNode) {
 	tree.root = newRoot
 	tree.meta.rootPageNumber = newRoot.PageNumber()
 	tree.meta.incrHeight()
-	return nil
 }

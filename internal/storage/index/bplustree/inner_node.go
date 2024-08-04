@@ -51,9 +51,6 @@ func NewInnerNode(
 		return nil, err
 	}
 	applyInnerNodeOptions(node, options...)
-	if err = node.sync(); err != nil {
-		return nil, err
-	}
 	return node, nil
 }
 
@@ -95,6 +92,7 @@ func WithIndexRecords(records []*page.Record) InnerNodeOption {
 func (node *InnerNode) Get(key Key) (*LeafNode, error) {
 	index := util.SearchIndex(key, node.keys)
 	pageNumber := node.getChild(index)
+	node.unpin(false)
 	child, err := BPlusNodeFrom(pageNumber, node.meta, node.bufferManager)
 	if err != nil {
 		return nil, err
@@ -104,6 +102,8 @@ func (node *InnerNode) Get(key Key) (*LeafNode, error) {
 }
 
 func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
+	defer node.unpin(true)
+
 	index := util.SearchIndex(key, node.keys)
 	pageNumber := node.getChild(index)
 	child, err := BPlusNodeFrom(pageNumber, node.meta, node.bufferManager)
@@ -129,9 +129,6 @@ func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
 	node.insertRecord(insertIndex+1, indexRecord)
 
 	if !node.isOverflowed() {
-		if err = node.sync(); err != nil {
-			return nil, err
-		}
 		return nil, nil //nolint:nilnil // nil is returned to indicate no split is needed.
 	}
 
@@ -154,10 +151,7 @@ func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
 	node.keys = node.keys[:node.meta.Order]
 	node.children = node.children[:node.meta.Order+1]
 	node.page.SetPrev(rightNode.page.PageNumber())
-	if err = node.sync(); err != nil {
-		return nil, err
-	}
-
+	node.unpin(true)
 	return &Pair{key: splitKey, value: rightNode.page.PageNumber()}, nil
 }
 
@@ -167,6 +161,7 @@ func (node *InnerNode) Delete(key Key) error {
 		return err
 	}
 
+	node.unpin(false)
 	return leafNode.Delete(key)
 }
 
@@ -205,6 +200,10 @@ func (node *InnerNode) insertRecord(index int, record *page.Record) {
 	node.page.Insert(uint16(index), record)
 }
 
+func (node *InnerNode) unpin(markDirty bool) {
+	node.bufferManager.Unpin(node.PageNumber(), markDirty)
+}
+
 func (node *InnerNode) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("InnerNode(")
@@ -214,10 +213,6 @@ func (node *InnerNode) String() string {
 	buffer.WriteString(fmt.Sprintf("prev=%d, ", node.page.PrevPageNumber()))
 	buffer.WriteString(fmt.Sprintf("next=%d)", node.page.NextPageNumber()))
 	return buffer.String()
-}
-
-func (node *InnerNode) sync() error {
-	return nil
 }
 
 func (node *InnerNode) isOverflowed() bool {

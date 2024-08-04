@@ -40,14 +40,13 @@ type BPlusNode interface {
 	// or does nothing if the key is not in the subtree.
 	// Note, delete not re-balance the tree, delete the key and record simply.
 	Delete(key Key) error
-
 	// PageNumber returns the page number of the page underlying the node.
 	PageNumber() page.Number
 
-	// sync synchronizes the node with the underlying page.
-	sync() error
 	// isOverflowed returns true if the node is overflowed.
 	isOverflowed() bool
+	// unpin buffer page.
+	unpin(markDirty bool)
 }
 
 // BPlusNodeFrom creates a new B+ tree page.
@@ -56,7 +55,7 @@ func BPlusNodeFrom(
 	meta *Metadata,
 	buffManager memory.BufferManager,
 ) (BPlusNode, error) {
-	p, err := buffManager.FetchPage(meta.tableSpaceID, pageNumber)
+	p, err := buffManager.FetchPage(pageNumber, meta.Schema)
 	if err != nil {
 		return nil, err
 	}

@@ -47,6 +47,7 @@ func TestDataPage_Insert(t *testing.T) {
 	record = p.Get(1)
 	assert.EqualValues(t, 3, p.RecordCount())
 	assert.True(t, record.Equal(page.NewRecordFromLiteral(3)))
+	assert.NotEmpty(t, p.String())
 }
 
 func TestDataPage_Append(t *testing.T) {

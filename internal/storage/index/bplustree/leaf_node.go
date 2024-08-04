@@ -47,10 +47,6 @@ func NewLeafNode(
 		return nil, err
 	}
 
-	if err = node.sync(); err != nil {
-		return nil, err
-	}
-
 	return node, nil
 }
 
@@ -93,6 +89,8 @@ func (node *LeafNode) Get(key Key) (*LeafNode, error) {
 // Put the key and record identifier into the subtree rooted by node.
 // If key already exists, raise an error.
 func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
+	defer node.unpin(true)
+
 	if slices.Contains(node.keys, key) {
 		return nil, ErrKeyExists
 	}
@@ -103,9 +101,6 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 	node.insertRecord(insertIndex, record)
 
 	if !node.isOverflowed() {
-		if err := node.sync(); err != nil {
-			return nil, err
-		}
 		return nil, nil //nolint:nilnil // nil is returned to indicate no split is needed.
 	}
 
@@ -123,17 +118,15 @@ func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	rightPageNumber := rightNode.page.PageNumber()
+	rightNode.unpin(true)
 	node.keys = node.keys[:node.meta.Order]
-	node.page.SetNext(rightNode.page.PageNumber())
-	if err = node.sync(); err != nil {
-		return nil, err
-	}
+	node.page.SetNext(rightPageNumber)
 
 	splitKey := rightKeys[0]
 	pair := &Pair{
 		key:   splitKey,
-		value: rightNode.page.PageNumber(),
+		value: rightPageNumber,
 	}
 	return pair, nil
 }
@@ -146,6 +139,7 @@ func (node *LeafNode) Delete(key Key) error {
 
 	node.keys = append(node.keys[:index], node.keys[index+1:]...)
 	node.page.Delete(uint16(index))
+	node.unpin(true)
 	return nil
 }
 
@@ -171,17 +165,8 @@ func leafNodeFromPage(
 	return node
 }
 
-func (node *LeafNode) sync() error {
-	return nil
-}
-
 func (node *LeafNode) Order() uint16 {
 	return node.meta.Order
-}
-
-func (node *LeafNode) isOverflowed() bool {
-	// FIXME: use the byte size of used space to determine if the node is overflowed.
-	return len(node.keys) > int(2*node.meta.Order) //nolint:mnd // 2*order is the threshold.
 }
 
 func (node *LeafNode) GetRecord(key Key) *page.Record {
@@ -193,8 +178,17 @@ func (node *LeafNode) GetRecord(key Key) *page.Record {
 	return node.page.Get(uint16(index))
 }
 
+func (node *LeafNode) isOverflowed() bool {
+	// FIXME: use the byte size of used space to determine if the node is overflowed.
+	return len(node.keys) > int(2*node.meta.Order) //nolint:mnd // 2*order is the threshold.
+}
+
 func (node *LeafNode) insertRecord(index int, record *page.Record) {
 	node.page.Insert(uint16(index), record)
+}
+
+func (node *LeafNode) unpin(markDirty bool) {
+	node.bufferManager.Unpin(node.PageNumber(), markDirty)
 }
 
 func (node *LeafNode) records() []*page.Record {

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/Huangkai1008/libradb/internal/field"
+	"github.com/Huangkai1008/libradb/internal/storage/disk"
 	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
@@ -28,7 +29,9 @@ func TestLeafTestSuite(t *testing.T) {
 }
 
 func (suite *LeafNodeTestSuite) SetupTest() {
-	bufferManager := newDummyBufferManager()
+	replacer := memory.NewLRUKReplacer(5)
+	diskManager := disk.NewMemoryDiskManager()
+	bufferManager := memory.NewBufferPool(1024, diskManager, replacer)
 	suite.bufferManager = bufferManager
 }
 

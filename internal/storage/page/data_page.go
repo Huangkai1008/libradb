@@ -54,10 +54,6 @@ func (p *DataPage) IsLeaf() bool {
 	return p.pageHeader.isLeaf
 }
 
-func (p *DataPage) Unpin() {
-	panic("not implemented")
-}
-
 func (p *DataPage) PrevPageNumber() Number {
 	return p.fileHeader.prevPageNumber
 }

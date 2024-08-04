@@ -1,69 +1,32 @@
 package bplustree_test
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive  // ginkgo
 	. "github.com/onsi/gomega"    //nolint:revive  // ginkgo
 
 	"github.com/Huangkai1008/libradb/internal/field"
+	"github.com/Huangkai1008/libradb/internal/storage/disk"
 	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
-// dummyBufferManager is a dummy implementation of memory.BufferManager.
-// Use spaceID and pageNumber as the key to store pages.
-type dummyBufferManager struct {
-	pageMap map[string]page.Page
+type DummyReplacer struct {
+	accessCounter map[page.Number]int
 }
 
-func newDummyBufferManager() *dummyBufferManager {
-	return &dummyBufferManager{
-		pageMap: make(map[string]page.Page),
+func NewDummyReplacer() *DummyReplacer {
+	return &DummyReplacer{
+		accessCounter: make(map[page.Number]int),
 	}
 }
 
-func (m *dummyBufferManager) ApplyNewPage(spaceID table.SpaceID, p page.Page) error {
-	key := fmt.Sprintf("%d:%d", spaceID, p.PageNumber())
-	m.pageMap[key] = p
-	return nil
-}
-
-func (m *dummyBufferManager) FetchPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error) {
-	key := fmt.Sprintf("%d:%d", spaceID, pageNumber)
-	p, ok := m.pageMap[key]
-	if !ok {
-		return nil, errors.New("page not found")
-	}
-	return p, nil
-}
-
-//nolint:revive,nilnil // Ignore linter error for now.
-func (m *dummyBufferManager) PinPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error) {
-	return nil, nil
-}
-
-//nolint:revive // Ignore linter error for now.
-func (m *dummyBufferManager) UnpinPage(spaceID table.SpaceID, pageNumber page.Number) error {
-	return nil
-}
-
-func (m *dummyBufferManager) Close() error {
-	m.pageMap = make(map[string]page.Page)
-	return nil
-}
-
-func (m *dummyBufferManager) String() string {
-	var buffer strings.Builder
-	for k, v := range m.pageMap {
-		buffer.WriteString(fmt.Sprintf("%s:%v ;", k, v))
-	}
-	return buffer.String()
+func (d *DummyReplacer) Access(pageNumber page.Number) {
+	d.accessCounter[pageNumber]++
 }
 
 var _ = Describe("B+ Tree Index", Ordered, func() {
@@ -84,7 +47,9 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		bufferManager = newDummyBufferManager()
+		replacer := memory.NewLRUKReplacer(5)
+		diskManager := disk.NewMemoryDiskManager()
+		bufferManager = memory.NewBufferPool(1024, diskManager, replacer)
 		DeferCleanup(bufferManager.Close)
 	})
 
