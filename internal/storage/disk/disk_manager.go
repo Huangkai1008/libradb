@@ -1,6 +1,17 @@
 package disk
 
-import "github.com/Huangkai1008/libradb/internal/storage/page"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/Huangkai1008/libradb/internal/storage/page"
+)
+
+var ErrPageNotAllocated = errors.New("page not allocated")
+
+func PageNotAllocated(pageNumber page.Number) error {
+	return fmt.Errorf("%w: %v", ErrPageNotAllocated, pageNumber)
+}
 
 type SpaceManager interface {
 	// ReadPage reads a page from disk.

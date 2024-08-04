@@ -1,13 +1,10 @@
 package disk
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/Huangkai1008/libradb/internal/storage/page"
 )
-
-var ErrPageNotAllocated = errors.New("page not allocated")
 
 type MemoryDiskManager struct {
 	mu    sync.Mutex
@@ -26,7 +23,7 @@ func (m *MemoryDiskManager) ReadPage(pageNumber page.Number, bytes []byte) error
 
 	contents, ok := m.pages[pageNumber]
 	if !ok {
-		return ErrPageNotAllocated
+		return PageNotAllocated(pageNumber)
 	}
 
 	copy(bytes, contents)
