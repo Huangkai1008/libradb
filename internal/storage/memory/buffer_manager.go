@@ -19,10 +19,8 @@ type BufferManager interface {
 	// ApplyNewPage reads a page from disk and applies it to memory.
 	ApplyNewPage(spaceID table.SpaceID, p page.Page) error
 	// FetchPage fetches the specified page.
-	FetchPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error)
-	// PinPage pins the specified page.
-	PinPage(spaceID table.SpaceID, pageNumber page.Number) (page.Page, error)
-	// UnpinPage unpins the specified page.
-	UnpinPage(spaceID table.SpaceID, pageNumber page.Number) error
+	FetchPage(pageNumber page.Number, schema *table.Schema) (page.Page, error)
+	// Unpin the specified page.
+	Unpin(pageNumber page.Number, markDirty bool)
 	io.Closer
 }
