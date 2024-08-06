@@ -193,6 +193,7 @@ func (m *BufferPool) flushPage(pageNumber page.Number) error {
 func (m *BufferPool) flushPages() {
 	for cb := range m.flushCh {
 		p := cb.bufferPage
-		_ = m.diskManager.WritePage(p.PageNumber(), p.Buffer())
+		contents := p.Buffer()
+		_ = m.diskManager.WritePage(p.PageNumber(), contents)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/Huangkai1008/libradb/internal/config"
 	"github.com/Huangkai1008/libradb/internal/field"
@@ -21,6 +22,7 @@ const (
 // DataPage is the page that stores data.
 // DatePage implements by the heap file.
 type DataPage struct {
+	mu         sync.RWMutex
 	fileHeader *fileHeader
 	pageHeader *pageHeader
 	// infimumRecord point to the dummy head of the records.
@@ -55,37 +57,57 @@ func (p *DataPage) IsLeaf() bool {
 }
 
 func (p *DataPage) PrevPageNumber() Number {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.fileHeader.prevPageNumber
 }
 
 func (p *DataPage) SetPrev(prevPageNumber Number) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.fileHeader.prevPageNumber = prevPageNumber
 }
 
 func (p *DataPage) NextPageNumber() Number {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.fileHeader.nextPageNumber
 }
 
 func (p *DataPage) SetNext(nextPageNumber Number) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	p.fileHeader.nextPageNumber = nextPageNumber
 }
 
 func (p *DataPage) Get(index uint16) *Record {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	return p.infimumRecord.Get(int(index))
 }
 
 func (p *DataPage) Insert(index uint16, record *Record) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.infimumRecord.Insert(int(index), record)
 	p.pageHeader.recordCount++
 }
 
 func (p *DataPage) Append(record *Record) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.infimumRecord.Append(record)
 	p.pageHeader.recordCount++
 }
 
 // Delete records with given index and returns the record.
 func (p *DataPage) Delete(index uint16) *Record {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	removed := p.infimumRecord.Remove(int(index))
 	p.pageHeader.recordCount--
 	return removed
@@ -145,6 +167,9 @@ func (p *DataPage) keys() []field.Value {
 // | File Trailer      |
 // +-------------------+ <- Page Size.
 func (p *DataPage) ToBytes() []byte {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	buf := make([]byte, config.PageSize)
 
 	offset := 0
@@ -154,7 +179,8 @@ func (p *DataPage) ToBytes() []byte {
 	copy(buf[offset:], p.pageHeader.toBytes())
 	offset += DataPageHeaderByteSize
 
-	for i := uint16(0); i < p.RecordCount(); i++ {
+	recordCount := p.RecordCount()
+	for i := uint16(0); i < recordCount; i++ {
 		record := p.infimumRecord.Get(int(i))
 		recordBytes := record.toBytes()
 		copy(buf[offset:], recordBytes)
