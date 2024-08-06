@@ -2,6 +2,27 @@
 ## [Unreleased]
 
 
+<a name="v0.6.0"></a>
+## [v0.6.0] - 2024-08-06
+### Bug Fixes
+- **disk:** disk space manager unallocated error
+- **page:** concurrent issues
+
+### Code Refactoring
+- **record:** use linked list to implement record
+
+### Features
+- **datastructure:** linkedlist implementation
+- **disk:** memory disk space manager implementation
+- **disk:** disk manager interface
+- **memory:** buffer pool implementation
+- **memory:** page replacer interface
+- **memory:** lru-k replacer implementation
+- **tree:** node unpin
+- **tree:** tree delete
+- **tree:** use linked list to implement B+ tree index
+
+
 <a name="v0.5.0"></a>
 ## [v0.5.0] - 2024-07-28
 ### Bug Fixes
@@ -76,7 +97,8 @@
 - **field:** type interface
 
 
-[Unreleased]: https://github.com/Huangkai1008/libradb/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Huangkai1008/libradb/compare/v0.6.0...HEAD
+[v0.6.0]: https://github.com/Huangkai1008/libradb/compare/v0.5.0...v0.6.0
 [v0.5.0]: https://github.com/Huangkai1008/libradb/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/Huangkai1008/libradb/compare/v0.3.0...v0.4.0
 [v0.3.0]: https://github.com/Huangkai1008/libradb/compare/v0.2.0...v0.3.0
