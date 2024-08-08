@@ -6,6 +6,8 @@ package bplustree
 
 import (
 	"fmt"
+	"github.com/Huangkai1008/libradb/internal/util"
+	"github.com/Huangkai1008/libradb/pkg/typing"
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
@@ -60,7 +62,7 @@ func NewBPlusTree(meta *Metadata, bufferManager memory.BufferManager) (*BPlusTre
 }
 
 func (tree *BPlusTree) Get(key Key) (*page.Record, error) {
-	leafNode, err := tree.root.Get(key)
+	leafNode, err := tree.getLeafNode(key)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +102,20 @@ func (tree *BPlusTree) Delete(key Key) error {
 	return tree.root.Delete(key)
 }
 
+func (tree *BPlusTree) Scan(key Key) typing.Iterator[*page.Record] {
+	leftMostLeaf, err := tree.getLeafNode(key)
+	if err != nil {
+		return nil
+	}
+
+	index := util.FindIndex(key, leftMostLeaf.keys)
+	if index == -1 {
+		return nil
+	}
+
+	return &RecordIterator{cur: leftMostLeaf, pos: index}
+}
+
 func (tree *BPlusTree) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("BPlusTree(")
@@ -112,4 +128,9 @@ func (tree *BPlusTree) updateRoot(newRoot BPlusNode) {
 	tree.root = newRoot
 	tree.meta.rootPageNumber = newRoot.PageNumber()
 	tree.meta.incrHeight()
+}
+
+func (tree *BPlusTree) getLeafNode(key Key) (leafNode *LeafNode, err error) {
+	leafNode, err = tree.root.Get(key)
+	return
 }

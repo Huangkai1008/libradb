@@ -15,20 +15,6 @@ import (
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
-type DummyReplacer struct {
-	accessCounter map[page.Number]int
-}
-
-func NewDummyReplacer() *DummyReplacer {
-	return &DummyReplacer{
-		accessCounter: make(map[page.Number]int),
-	}
-}
-
-func (d *DummyReplacer) Access(pageNumber page.Number) {
-	d.accessCounter[pageNumber]++
-}
-
 var _ = Describe("B+ Tree Index", Ordered, func() {
 	var schema *table.Schema
 	var bufferManager memory.BufferManager

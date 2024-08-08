@@ -1,6 +1,6 @@
 package field
 
-type TypeID int
+type TypeID uint8
 
 const (
 	INTEGER TypeID = iota + 1
