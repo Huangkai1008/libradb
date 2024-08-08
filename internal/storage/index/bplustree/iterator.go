@@ -9,7 +9,9 @@ type RecordIterator struct {
 	pos int
 }
 
-func (it *RecordIterator) Prev() (record *page.Record) {
+func (it *RecordIterator) Prev() *page.Record {
+	var record *page.Record
+
 	defer func() {
 		if record != nil {
 			it.pos--
@@ -17,11 +19,15 @@ func (it *RecordIterator) Prev() (record *page.Record) {
 	}()
 
 	if it.pos >= 0 {
-		return it.cur.records()[it.pos]
+		if it.pos == len(it.cur.records()) {
+			it.pos--
+		}
+		record = it.cur.records()[it.pos]
+		return record
 	}
 
 	// Move to prev leaf page.
-	prevPageNumber := it.cur.page.NextPageNumber()
+	prevPageNumber := it.cur.page.PrevPageNumber()
 	if prevPageNumber == page.InvalidPageNumber {
 		return nil
 	}
@@ -31,12 +37,19 @@ func (it *RecordIterator) Prev() (record *page.Record) {
 		return nil
 	}
 
-	it.cur = leaf.(*LeafNode)
-	it.pos = len(it.cur.records()) - 1
-	return it.cur.records()[it.pos]
+	cur, ok := leaf.(*LeafNode)
+	if !ok {
+		return nil
+	}
+
+	it.cur, it.pos = cur, len(cur.records())-1
+	record = it.cur.records()[it.pos]
+	return record
 }
 
-func (it *RecordIterator) Next() (record *page.Record) {
+func (it *RecordIterator) Next() *page.Record {
+	var record *page.Record
+
 	defer func() {
 		if record != nil {
 			it.pos++
@@ -44,7 +57,8 @@ func (it *RecordIterator) Next() (record *page.Record) {
 	}()
 
 	if it.pos < len(it.cur.records()) {
-		return it.cur.records()[it.pos]
+		record = it.cur.records()[it.pos]
+		return record
 	}
 
 	// Move to next leaf page.
@@ -58,7 +72,12 @@ func (it *RecordIterator) Next() (record *page.Record) {
 		return nil
 	}
 
-	it.cur = leaf.(*LeafNode)
-	it.pos = 0
-	return it.cur.records()[it.pos]
+	cur, ok := leaf.(*LeafNode)
+	if !ok {
+		return nil
+	}
+
+	it.cur, it.pos = cur, 0
+	record = it.cur.records()[it.pos]
+	return record
 }

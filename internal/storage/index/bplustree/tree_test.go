@@ -160,6 +160,129 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 		})
 	})
 
+	Describe("Scan in B+ tree", Ordered, func() {
+		BeforeEach(func() {
+			tree, _ = bplustree.NewBPlusTree(&bplustree.Metadata{
+				Order:  1,
+				Schema: schema,
+			}, bufferManager)
+
+			By("Put multiple keys in tree", func() {
+				records := [][]any{
+					{4, "Alice", 20, true, 90.5},
+					{9, "Bob", 21, false, 85.5},
+					{6, "Charlie", 22, true, 80.5},
+					{2, "David", 23, false, 75.5},
+					{1, "Adam", 23, false, 95.5},
+					{3, "Grace", 26, true, 60.5},
+					{8, "Frank", 25, false, 65.5},
+					{7, "Eve", 24, true, 70.5},
+				}
+
+				for _, record := range records {
+					key := field.NewValue(pkType, record[0])
+					_ = tree.Put(key, page.NewRecordFromLiteral(record...))
+				}
+			})
+		})
+
+		It("search records greater than equal (>=)", func() {
+			By("Scan all records where pk >= 5")
+			iterator := tree.Scan(field.NewValue(pkType, 5))
+			Expect(iterator).To(Not(BeNil()))
+
+			next := iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 6)))
+
+			next = iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 7)))
+
+			next = iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 8)))
+
+			next = iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 9)))
+
+			next = iterator.Next()
+			Expect(next).To(BeNil())
+
+			By("Scan all records where pk >= 6")
+			iterator = tree.Scan(field.NewValue(pkType, 6))
+			Expect(iterator).To(Not(BeNil()))
+
+			next = iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 6)))
+
+			next = iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 7)))
+
+			next = iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 8)))
+
+			next = iterator.Next()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 9)))
+
+			next = iterator.Next()
+			Expect(next).To(BeNil())
+		})
+
+		It("search records less than equal (<=)", func() {
+			By("Scan all records where pk <= 4")
+			iterator := tree.Scan(field.NewValue(pkType, 4))
+			Expect(iterator).To(Not(BeNil()))
+
+			next := iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 4)))
+
+			next = iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 3)))
+
+			next = iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 2)))
+
+			next = iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 1)))
+
+			next = iterator.Prev()
+			Expect(next).To(BeNil())
+
+			By("Scan all records where pk <= 5")
+			iterator = tree.Scan(field.NewValue(pkType, 5))
+			Expect(iterator).To(Not(BeNil()))
+
+			next = iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 4)))
+
+			next = iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 3)))
+
+			next = iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 2)))
+
+			next = iterator.Prev()
+			Expect(next).ToNot(BeNil())
+			Expect(next.GetKey()).To(Equal(field.NewValue(pkType, 1)))
+
+			next = iterator.Prev()
+			Expect(next).To(BeNil())
+		})
+	})
+
 	Describe("WhiteBox test", func() {
 
 		BeforeEach(func() {

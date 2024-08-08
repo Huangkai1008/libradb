@@ -98,6 +98,8 @@ func TestInsertIndex(t *testing.T) {
 		{test{0}, testsSlice([]int{1, 320, 360}), 0},
 		{test{360}, testsSlice([]int{1, 320, 360}), 2},
 		{test{28}, testsSlice([]int{5, 10, 15, 20, 25, 30}), 5},
+		{test{6}, testsSlice([]int{6, 7}), 0},
+		{test{5}, testsSlice([]int{3, 4}), 2},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {

@@ -6,13 +6,13 @@ package bplustree
 
 import (
 	"fmt"
-	"github.com/Huangkai1008/libradb/internal/util"
-	"github.com/Huangkai1008/libradb/pkg/typing"
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
 	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
+	"github.com/Huangkai1008/libradb/internal/util"
+	"github.com/Huangkai1008/libradb/pkg/typing"
 )
 
 // Metadata of a B+ tree.
@@ -108,11 +108,7 @@ func (tree *BPlusTree) Scan(key Key) typing.Iterator[*page.Record] {
 		return nil
 	}
 
-	index := util.FindIndex(key, leftMostLeaf.keys)
-	if index == -1 {
-		return nil
-	}
-
+	index := util.InsertIndex(key, leftMostLeaf.keys)
 	return &RecordIterator{cur: leftMostLeaf, pos: index}
 }
 
@@ -130,7 +126,6 @@ func (tree *BPlusTree) updateRoot(newRoot BPlusNode) {
 	tree.meta.incrHeight()
 }
 
-func (tree *BPlusTree) getLeafNode(key Key) (leafNode *LeafNode, err error) {
-	leafNode, err = tree.root.Get(key)
-	return
+func (tree *BPlusTree) getLeafNode(key Key) (*LeafNode, error) {
+	return tree.root.Get(key)
 }
