@@ -71,9 +71,9 @@ func TestVarchar_ByteSize(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				sut := field.NewVarchar(field.WithLength(tt.length))
 
-				bytesize := sut.ByteSize()
+				byteSize := sut.ByteSize()
 
-				assert.Equal(t, tt.result, bytesize)
+				assert.Equal(t, tt.result, byteSize)
 			})
 		}
 	})
