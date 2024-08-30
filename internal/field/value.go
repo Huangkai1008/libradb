@@ -1,6 +1,7 @@
 package field
 
 import (
+	"bytes"
 	"cmp"
 	"encoding/binary"
 	"errors"
@@ -72,8 +73,11 @@ func FromBytes(t Type, bytes []byte) (Value, error) {
 	case FLOAT:
 		val := math.Float32frombits(binary.LittleEndian.Uint32(bytes))
 		return FloatValue{t: t.(*Float), val: val}, nil
+	case BINARY:
+		return BinaryValue{t: t.(*Binary), val: bytes}, nil
+	default:
+		return nil, ErrValueNil
 	}
-	return nil, ErrValueNil
 }
 
 type IntegerValue struct {
@@ -94,9 +98,9 @@ func (v IntegerValue) Val() any {
 }
 
 func (v IntegerValue) ToBytes() []byte {
-	bytes := make([]byte, v.Type().ByteSize())
-	binary.LittleEndian.PutUint32(bytes, uint32(v.val))
-	return bytes
+	b := make([]byte, v.Type().ByteSize())
+	binary.LittleEndian.PutUint32(b, uint32(v.val))
+	return b
 }
 
 func (v IntegerValue) String() string {
@@ -123,11 +127,11 @@ func (v VarcharValue) Val() any {
 func (v VarcharValue) ToBytes() []byte {
 	runes := []rune(v.val)
 	charCount := len(runes)
-	bytes := make([]byte, charCount*4) //nolint:mnd // 4 bytes per rune
+	b := make([]byte, charCount*4) //nolint:mnd // 4 b per rune
 	for i, r := range runes {
-		binary.LittleEndian.PutUint32(bytes[i*4:], uint32(r))
+		binary.LittleEndian.PutUint32(b[i*4:], uint32(r))
 	}
-	return bytes
+	return b
 }
 
 func (v VarcharValue) String() string {
@@ -158,11 +162,11 @@ func (v BooleanValue) Val() any {
 }
 
 func (v BooleanValue) ToBytes() []byte {
-	bytes := make([]byte, 1)
+	b := make([]byte, 1)
 	if v.val {
-		bytes[0] = 1
+		b[0] = 1
 	}
-	return bytes
+	return b
 }
 
 func (v BooleanValue) String() string {
@@ -187,11 +191,32 @@ func (v FloatValue) Val() any {
 }
 
 func (v FloatValue) ToBytes() []byte {
-	bytes := make([]byte, 4) //nolint:mnd // 4 bytes per float32
-	binary.LittleEndian.PutUint32(bytes, math.Float32bits(v.val))
-	return bytes
+	b := make([]byte, 4) //nolint:mnd // 4 b per float32
+	binary.LittleEndian.PutUint32(b, math.Float32bits(v.val))
+	return b
 }
 
 func (v FloatValue) String() string {
 	return fmt.Sprint(v.val)
+}
+
+type BinaryValue struct {
+	t   *Binary
+	val []byte
+}
+
+func (v BinaryValue) Compare(t Value) int {
+	return bytes.Compare(v.val, t.(BinaryValue).val)
+}
+
+func (v BinaryValue) Type() Type {
+	return v.t
+}
+
+func (v BinaryValue) Val() any {
+	return v.val
+}
+
+func (v BinaryValue) ToBytes() []byte {
+	return v.val
 }

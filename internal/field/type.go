@@ -7,6 +7,7 @@ const (
 	VARCHAR
 	BOOLEAN
 	FLOAT
+	BINARY
 )
 
 type Type interface {
@@ -44,14 +45,14 @@ func WithAllowNull[T Nullable](allowNull bool) Option[T] {
 }
 
 func IsVarLen(t Type) bool {
-	return t.TypeID() == VARCHAR
+	return t.TypeID() == VARCHAR || t.TypeID() == BINARY
 }
 
 // Length returns the length of the field.
 //
 // Note: This function is only applicable to Variable-Length fields.
 func Length(t Type) int {
-	if t.TypeID() != VARCHAR {
+	if t.TypeID() != VARCHAR && t.TypeID() != BINARY {
 		panic("unsupported type")
 	}
 
