@@ -2,22 +2,22 @@ package bplustree
 
 import (
 	"errors"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 
 	"github.com/Huangkai1008/libradb/internal/field"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 )
 
 type Pair struct {
 	key   Key
-	value page.Number
+	value table.PageNumber
 }
 
 func (p Pair) Key() Key {
 	return p.key
 }
 
-func (p Pair) Value() page.Number {
+func (p Pair) Value() table.PageNumber {
 	return p.value
 }
 
@@ -35,13 +35,13 @@ type BPlusNode interface {
 	// If put operation causes the node to split,
 	// it returns the key and page number of the new node.
 	// Otherwise, it returns nil.
-	Put(key Key, record *page.Record) (*Pair, error)
+	Put(key Key, record *table.Record) (*Pair, error)
 	// Delete the key and its corresponding record from the subtree rooted by node,
 	// or does nothing if the key is not in the subtree.
 	// Note, delete not re-balance the tree, delete the key and record simply.
 	Delete(key Key) error
 	// PageNumber returns the page number of the page underlying the node.
-	PageNumber() page.Number
+	PageNumber() table.PageNumber
 
 	// isOverflowed returns true if the node is overflowed.
 	isOverflowed() bool
@@ -51,7 +51,7 @@ type BPlusNode interface {
 
 // BPlusNodeFrom creates a new B+ tree page.
 func BPlusNodeFrom(
-	pageNumber page.Number,
+	pageNumber table.PageNumber,
 	meta *Metadata,
 	buffManager memory.BufferManager,
 ) (BPlusNode, error) {
@@ -60,7 +60,7 @@ func BPlusNodeFrom(
 		return nil, err
 	}
 
-	dataPage, ok := p.(*page.DataPage)
+	dataPage, ok := p.(*table.DataPage)
 	if !ok {
 		return nil, errors.New("not a data page")
 	}
@@ -71,6 +71,6 @@ func BPlusNodeFrom(
 	return innerNodeFromPage(meta, buffManager, dataPage), nil
 }
 
-func newIndexRecord(key Key, pageNumber page.Number) *page.Record {
-	return page.NewRecord(key, field.NewValue(field.NewInteger(), int(pageNumber)))
+func newIndexRecord(key Key, pageNumber table.PageNumber) *table.Record {
+	return table.NewRecord(key, field.NewValue(field.NewInteger(), int(pageNumber)))
 }

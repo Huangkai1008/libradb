@@ -1,23 +1,23 @@
-package page_test
+package table_test
 
 import (
 	"fmt"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"testing"
 
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRecord_Equal(t *testing.T) {
 	t.Run("should not equal if value lengths are not match", func(t *testing.T) {
 		var tests = []struct {
-			record1 *page.Record
-			record2 *page.Record
+			record1 *table.Record
+			record2 *table.Record
 		}{
-			{page.NewRecord(), page.NewRecordFromLiteral(1)},
-			{page.NewRecord(), page.NewRecordFromLiteral(0, 2)},
-			{page.NewRecordFromLiteral(20), page.NewRecordFromLiteral(1, 60)},
-			{page.NewRecordFromLiteral(20), page.NewRecordFromLiteral(2, 60)},
+			{table.NewRecord(), table.NewRecordFromLiteral(1)},
+			{table.NewRecord(), table.NewRecordFromLiteral(0, 2)},
+			{table.NewRecordFromLiteral(20), table.NewRecordFromLiteral(1, 60)},
+			{table.NewRecordFromLiteral(20), table.NewRecordFromLiteral(2, 60)},
 		}
 
 		for i, test := range tests {
@@ -30,8 +30,8 @@ func TestRecord_Equal(t *testing.T) {
 	})
 
 	t.Run("should equal if records values is empty", func(t *testing.T) {
-		record1 := page.NewRecord()
-		record2 := page.NewRecord()
+		record1 := table.NewRecord()
+		record2 := table.NewRecord()
 
 		equality := record1.Equal(record2)
 
@@ -40,20 +40,20 @@ func TestRecord_Equal(t *testing.T) {
 
 	t.Run("should equal if records values are equal", func(t *testing.T) {
 		var tests = []struct {
-			record1 *page.Record
-			record2 *page.Record
+			record1 *table.Record
+			record2 *table.Record
 		}{
 			{
-				page.NewRecordFromLiteral(1, 60),
-				page.NewRecordFromLiteral(1, 60)},
+				table.NewRecordFromLiteral(1, 60),
+				table.NewRecordFromLiteral(1, 60)},
 			{
-				page.NewRecordFromLiteral(6, "Charlie", 22, true, 80.5),
-				page.NewRecordFromLiteral(6, "Charlie", 22, true, 80.5),
+				table.NewRecordFromLiteral(6, "Charlie", 22, true, 80.5),
+				table.NewRecordFromLiteral(6, "Charlie", 22, true, 80.5),
 			},
 
 			{
-				page.NewRecordFromLiteral(7, "Tom", 12, false, 80.5),
-				page.NewRecordFromLiteral(7, "Tom", 12, false, 80.5),
+				table.NewRecordFromLiteral(7, "Tom", 12, false, 80.5),
+				table.NewRecordFromLiteral(7, "Tom", 12, false, 80.5),
 			},
 		}
 
@@ -69,13 +69,13 @@ func TestRecord_Equal(t *testing.T) {
 
 func TestRecord_Get(t *testing.T) {
 	var tests = []struct {
-		record   *page.Record
+		record   *table.Record
 		index    int
 		expected any
 	}{
-		{page.NewRecordFromLiteral(1, "Hello"), 0, 1},
-		{page.NewRecordFromLiteral(1, "Hello"), 1, "Hello"},
-		{page.NewRecordFromLiteral(1, "Hello", "Hello1"), 2, "Hello1"},
+		{table.NewRecordFromLiteral(1, "Hello"), 0, 1},
+		{table.NewRecordFromLiteral(1, "Hello"), 1, "Hello"},
+		{table.NewRecordFromLiteral(1, "Hello", "Hello1"), 2, "Hello1"},
 	}
 
 	for i, test := range tests {
@@ -86,12 +86,12 @@ func TestRecord_Get(t *testing.T) {
 }
 func TestRecord_GetKey(t *testing.T) {
 	var tests = []struct {
-		record   *page.Record
+		record   *table.Record
 		expected any
 	}{
-		{page.NewRecordFromLiteral(1, "Hello"), 1},
-		{page.NewRecordFromLiteral(2, "Hello"), 2},
-		{page.NewRecordFromLiteral(1, "Hello", "Hello1"), 1},
+		{table.NewRecordFromLiteral(1, "Hello"), 1},
+		{table.NewRecordFromLiteral(2, "Hello"), 2},
+		{table.NewRecordFromLiteral(1, "Hello", "Hello1"), 1},
 	}
 
 	for i, test := range tests {

@@ -8,14 +8,13 @@ import (
 
 	"github.com/Huangkai1008/libradb/internal/storage/disk"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 var _ = Describe("Buffer manager", Ordered, func() {
 	poolSize := uint16(5)
 	tableSpaceID := table.SpaceID(1)
-	var diskManager disk.SpaceManager
+	var diskManager disk.Manager
 	var replacer memory.Replacer
 	var bufferManager memory.BufferManager
 	var schema *table.Schema
@@ -38,7 +37,7 @@ var _ = Describe("Buffer manager", Ordered, func() {
 		Describe("Apply pages from buffer manager", func() {
 			When("pool is empty", func() {
 				It("should apply a page successfully", func() {
-					p := page.NewDataPage(true)
+					p := table.NewDataPage(true)
 					err := bufferManager.ApplyNewPage(tableSpaceID, p)
 					Expect(err).To(BeNil())
 				})
@@ -47,7 +46,7 @@ var _ = Describe("Buffer manager", Ordered, func() {
 			When("pool is not full", func() {
 				It("should apply pages successfully", func() {
 					for i := uint16(0); i < poolSize; i++ {
-						p := page.NewDataPage(true)
+						p := table.NewDataPage(true)
 						err := bufferManager.ApplyNewPage(tableSpaceID, p)
 						Expect(err).To(BeNil())
 					}
@@ -57,11 +56,11 @@ var _ = Describe("Buffer manager", Ordered, func() {
 			When("pool is full", func() {
 				It("should raise an error", func() {
 					for i := uint16(0); i < poolSize; i++ {
-						p := page.NewDataPage(true)
+						p := table.NewDataPage(true)
 						_ = bufferManager.ApplyNewPage(tableSpaceID, p)
 					}
 
-					p := page.NewDataPage(true)
+					p := table.NewDataPage(true)
 					err := bufferManager.ApplyNewPage(tableSpaceID, p)
 					Expect(err).ToNot(BeNil())
 					Expect(err).To(MatchError(memory.ErrBufferPoolIsFull))
@@ -71,9 +70,9 @@ var _ = Describe("Buffer manager", Ordered, func() {
 			When("unpin unused pages", func() {
 				It("should can apply new page", func() {
 					By("creating pages to fill the pool")
-					pageNumbers := make([]page.Number, poolSize)
+					pageNumbers := make([]table.PageNumber, poolSize)
 					for i := uint16(0); i < poolSize; i++ {
-						p := page.NewDataPage(true)
+						p := table.NewDataPage(true)
 						err := bufferManager.ApplyNewPage(tableSpaceID, p)
 						Expect(err).To(BeNil())
 						pageNumbers[i] = p.PageNumber()
@@ -83,7 +82,7 @@ var _ = Describe("Buffer manager", Ordered, func() {
 					bufferManager.Unpin(pageNumbers[0], true)
 
 					By("can create a new page again now")
-					p := page.NewDataPage(true)
+					p := table.NewDataPage(true)
 					err := bufferManager.ApplyNewPage(tableSpaceID, p)
 					Expect(err).To(BeNil())
 				})
@@ -93,7 +92,7 @@ var _ = Describe("Buffer manager", Ordered, func() {
 		Describe("Fetch pages from buffer manager", func() {
 			When("page is on the pool", func() {
 				It("should get page directly", func() {
-					p := page.NewDataPage(true)
+					p := table.NewDataPage(true)
 					pageNumber := p.PageNumber()
 					_ = bufferManager.ApplyNewPage(tableSpaceID, p)
 
@@ -107,9 +106,9 @@ var _ = Describe("Buffer manager", Ordered, func() {
 			When("page is not on the pool", func() {
 				It("should get page from disk", func() {
 					By("creating pages to fill the pool")
-					pageNumbers := make([]page.Number, poolSize)
+					pageNumbers := make([]table.PageNumber, poolSize)
 					for i := uint16(0); i < poolSize; i++ {
-						p := page.NewDataPage(true)
+						p := table.NewDataPage(true)
 						err := bufferManager.ApplyNewPage(tableSpaceID, p)
 						Expect(err).To(BeNil())
 						pageNumbers[i] = p.PageNumber()
@@ -119,7 +118,7 @@ var _ = Describe("Buffer manager", Ordered, func() {
 					bufferManager.Unpin(pageNumbers[0], true)
 
 					By("create a new page again now")
-					p := page.NewDataPage(true)
+					p := table.NewDataPage(true)
 					applyErr := bufferManager.ApplyNewPage(tableSpaceID, p)
 					Expect(applyErr).To(BeNil())
 					bufferManager.Unpin(p.PageNumber(), true)

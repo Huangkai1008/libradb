@@ -1,4 +1,4 @@
-package page
+package table
 
 import (
 	"encoding/binary"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/Huangkai1008/libradb/internal/config"
 	"github.com/Huangkai1008/libradb/internal/field"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"github.com/Huangkai1008/libradb/pkg/ds"
 )
 
@@ -44,7 +43,7 @@ func NewDataPage(isLeaf bool) *DataPage {
 	return p
 }
 
-func (p *DataPage) PageNumber() Number {
+func (p *DataPage) PageNumber() PageNumber {
 	return p.fileHeader.pageNumber
 }
 
@@ -56,25 +55,25 @@ func (p *DataPage) IsLeaf() bool {
 	return p.pageHeader.isLeaf
 }
 
-func (p *DataPage) PrevPageNumber() Number {
+func (p *DataPage) PrevPageNumber() PageNumber {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.fileHeader.prevPageNumber
 }
 
-func (p *DataPage) SetPrev(prevPageNumber Number) {
+func (p *DataPage) SetPrev(prevPageNumber PageNumber) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.fileHeader.prevPageNumber = prevPageNumber
 }
 
-func (p *DataPage) NextPageNumber() Number {
+func (p *DataPage) NextPageNumber() PageNumber {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.fileHeader.nextPageNumber
 }
 
-func (p *DataPage) SetNext(nextPageNumber Number) {
+func (p *DataPage) SetNext(nextPageNumber PageNumber) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	p.fileHeader.nextPageNumber = nextPageNumber
@@ -198,7 +197,7 @@ func (p *DataPage) ToBytes() []byte {
 	return buf
 }
 
-func DataPageFromBytes(buf []byte, schema *table.Schema) *DataPage {
+func DataPageFromBytes(buf []byte, schema *Schema) *DataPage {
 	page := NewDataPage(true)
 
 	offset := 0

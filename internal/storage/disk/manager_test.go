@@ -1,6 +1,7 @@
 package disk_test
 
 import (
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive  // ginkgo
@@ -8,17 +9,16 @@ import (
 
 	"github.com/Huangkai1008/libradb/internal/config"
 	"github.com/Huangkai1008/libradb/internal/storage/disk"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 )
 
 var _ = Describe("Disk space manager", func() {
-	var diskManager disk.SpaceManager
+	var diskManager disk.Manager
 	AssertSpaceManagerBehavior := func() {
 		Describe("Read/Write page from space manager", func() {
 			When("read invalid page", func() {
 				It("should return an error", func() {
 					pageContent := make([]byte, config.PageSize)
-					err := diskManager.ReadPage(page.InvalidPageNumber, pageContent)
+					err := diskManager.ReadPage(table.InvalidPageNumber, pageContent)
 					Expect(err).To(HaveOccurred())
 					Expect(err).Should(MatchError(disk.ErrPageNotAllocated))
 				})
@@ -27,7 +27,7 @@ var _ = Describe("Disk space manager", func() {
 			When("read non-existing page", func() {
 				It("should return an error", func() {
 					pageContent := make([]byte, config.PageSize)
-					err := diskManager.ReadPage(page.NewNumber(), pageContent)
+					err := diskManager.ReadPage(table.NewNumber(), pageContent)
 					Expect(err).To(HaveOccurred())
 					Expect(err).Should(MatchError(disk.ErrPageNotAllocated))
 				})
@@ -35,7 +35,7 @@ var _ = Describe("Disk space manager", func() {
 
 			When("read write page", func() {
 				It("should content-match", func() {
-					p := page.NewDataPage(true)
+					p := table.NewDataPage(true)
 					contents := p.Buffer()
 
 					err := diskManager.WritePage(p.PageNumber(), contents)

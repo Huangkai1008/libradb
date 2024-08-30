@@ -1,7 +1,7 @@
 package bplustree
 
 import (
-	"github.com/Huangkai1008/libradb/internal/storage/page"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type RecordIterator struct {
@@ -9,8 +9,15 @@ type RecordIterator struct {
 	pos int
 }
 
-func (it *RecordIterator) Prev() *page.Record {
-	var record *page.Record
+func NewRecordIterator(head *LeafNode, startPos int) *RecordIterator {
+	return &RecordIterator{
+		cur: head,
+		pos: startPos,
+	}
+}
+
+func (it *RecordIterator) Prev() *table.Record {
+	var record *table.Record
 
 	defer func() {
 		if record != nil {
@@ -28,7 +35,7 @@ func (it *RecordIterator) Prev() *page.Record {
 
 	// Move to prev leaf page.
 	prevPageNumber := it.cur.page.PrevPageNumber()
-	if prevPageNumber == page.InvalidPageNumber {
+	if prevPageNumber == table.InvalidPageNumber {
 		return nil
 	}
 
@@ -47,8 +54,8 @@ func (it *RecordIterator) Prev() *page.Record {
 	return record
 }
 
-func (it *RecordIterator) Next() *page.Record {
-	var record *page.Record
+func (it *RecordIterator) Next() *table.Record {
+	var record *table.Record
 
 	defer func() {
 		if record != nil {
@@ -63,7 +70,7 @@ func (it *RecordIterator) Next() *page.Record {
 
 	// Move to next leaf page.
 	nextPageNumber := it.cur.page.NextPageNumber()
-	if nextPageNumber == page.InvalidPageNumber {
+	if nextPageNumber == table.InvalidPageNumber {
 		return nil
 	}
 

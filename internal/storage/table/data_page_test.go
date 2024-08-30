@@ -1,69 +1,68 @@
-package page_test
+package table_test
 
 import (
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Huangkai1008/libradb/internal/field"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 func TestNewDataPage(t *testing.T) {
 	t.Run("leaf data page", func(t *testing.T) {
-		p := page.NewDataPage(true)
+		p := table.NewDataPage(true)
 
 		assert.True(t, p.IsLeaf())
 		assert.NotEmpty(t, p.PageNumber())
-		assert.Equal(t, page.InvalidPageNumber, p.PrevPageNumber())
-		assert.Equal(t, page.InvalidPageNumber, p.NextPageNumber())
+		assert.Equal(t, table.InvalidPageNumber, p.PrevPageNumber())
+		assert.Equal(t, table.InvalidPageNumber, p.NextPageNumber())
 		assert.Zero(t, p.RecordCount())
 	})
 
 	t.Run("inner data page", func(t *testing.T) {
-		p := page.NewDataPage(false)
+		p := table.NewDataPage(false)
 
 		assert.False(t, p.IsLeaf())
 		assert.NotEmpty(t, p.PageNumber())
-		assert.Equal(t, page.InvalidPageNumber, p.PrevPageNumber())
-		assert.Equal(t, page.InvalidPageNumber, p.NextPageNumber())
+		assert.Equal(t, table.InvalidPageNumber, p.PrevPageNumber())
+		assert.Equal(t, table.InvalidPageNumber, p.NextPageNumber())
 		assert.Zero(t, p.RecordCount())
 	})
 }
 
 func TestDataPage_Insert(t *testing.T) {
-	p := page.NewDataPage(true)
+	p := table.NewDataPage(true)
 
-	p.Insert(0, page.NewRecordFromLiteral(1))
+	p.Insert(0, table.NewRecordFromLiteral(1))
 	record := p.Get(0)
 	assert.EqualValues(t, 1, p.RecordCount())
-	assert.True(t, record.Equal(page.NewRecordFromLiteral(1)))
+	assert.True(t, record.Equal(table.NewRecordFromLiteral(1)))
 
-	p.Insert(1, page.NewRecordFromLiteral(2))
+	p.Insert(1, table.NewRecordFromLiteral(2))
 	assert.EqualValues(t, 2, p.RecordCount())
 
-	p.Insert(1, page.NewRecordFromLiteral(3))
+	p.Insert(1, table.NewRecordFromLiteral(3))
 	record = p.Get(1)
 	assert.EqualValues(t, 3, p.RecordCount())
-	assert.True(t, record.Equal(page.NewRecordFromLiteral(3)))
+	assert.True(t, record.Equal(table.NewRecordFromLiteral(3)))
 	assert.NotEmpty(t, p.String())
 }
 
 func TestDataPage_Append(t *testing.T) {
-	p := page.NewDataPage(true)
+	p := table.NewDataPage(true)
 
 	for i := 0; i < 10; i++ {
-		p.Append(page.NewRecordFromLiteral(i))
+		p.Append(table.NewRecordFromLiteral(i))
 	}
 
 	assert.EqualValues(t, 10, p.RecordCount())
 }
 
 func TestDataPage_Delete(t *testing.T) {
-	p := page.NewDataPage(true)
+	p := table.NewDataPage(true)
 	for i := 1; i < 10; i++ {
-		p.Append(page.NewRecordFromLiteral(i))
+		p.Append(table.NewRecordFromLiteral(i))
 	}
 
 	record := p.Get(5)
@@ -77,9 +76,9 @@ func TestDataPage_Delete(t *testing.T) {
 }
 
 func TestDataPage_Shrink(t *testing.T) {
-	p := page.NewDataPage(true)
+	p := table.NewDataPage(true)
 	for i := 0; i < 10; i++ {
-		p.Append(page.NewRecordFromLiteral(i))
+		p.Append(table.NewRecordFromLiteral(i))
 	}
 	assert.EqualValues(t, 10, p.RecordCount())
 
@@ -98,33 +97,33 @@ func TestDataPage_Buffer(t *testing.T) {
 		WithField("score", field.NewFloat())
 
 	t.Run("no records", func(t *testing.T) {
-		p := page.NewDataPage(true)
+		p := table.NewDataPage(true)
 
 		buffer := p.Buffer()
-		newP := page.DataPageFromBytes(buffer, schema)
+		newP := table.DataPageFromBytes(buffer, schema)
 		assert.Equal(t, buffer, newP.Buffer())
 	})
 
 	t.Run("with records", func(t *testing.T) {
-		p := page.NewDataPage(true)
-		records := []*page.Record{
-			page.NewRecordFromLiteral(4, "Alice", 20, true, 90.5),
-			page.NewRecordFromLiteral(9, "Bob", 21, false, 85.5),
-			page.NewRecordFromLiteral(6, "Charlie", 22, true, 80.5),
+		p := table.NewDataPage(true)
+		records := []*table.Record{
+			table.NewRecordFromLiteral(4, "Alice", 20, true, 90.5),
+			table.NewRecordFromLiteral(9, "Bob", 21, false, 85.5),
+			table.NewRecordFromLiteral(6, "Charlie", 22, true, 80.5),
 		}
 		for _, record := range records {
 			p.Append(record)
 		}
 
 		buffer := p.Buffer()
-		newP := page.DataPageFromBytes(buffer, schema)
+		newP := table.DataPageFromBytes(buffer, schema)
 		assert.Equal(t, buffer, newP.Buffer())
 	})
 
-	p := page.NewDataPage(true)
+	p := table.NewDataPage(true)
 
 	buffer := p.Buffer()
-	newP := page.DataPageFromBytes(buffer, schema)
+	newP := table.DataPageFromBytes(buffer, schema)
 
 	assert.Equal(t, buffer, newP.Buffer())
 }

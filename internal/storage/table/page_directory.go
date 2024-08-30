@@ -1,4 +1,4 @@
-package page
+package table
 
 import (
 	"encoding/binary"

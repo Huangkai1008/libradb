@@ -4,18 +4,18 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Huangkai1008/libradb/internal/storage/page"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 var ErrPageNotAllocated = errors.New("page not allocated")
 
-func PageNotAllocated(pageNumber page.Number) error {
+func PageNotAllocated(pageNumber table.PageNumber) error {
 	return fmt.Errorf("%w: %v", ErrPageNotAllocated, pageNumber)
 }
 
-type SpaceManager interface {
+type Manager interface {
 	// ReadPage reads a page from disk.
-	ReadPage(page.Number, []byte) error
+	ReadPage(table.PageNumber, []byte) error
 	// WritePage writes a page to disk.
-	WritePage(page.Number, []byte) error
+	WritePage(table.PageNumber, []byte) error
 }

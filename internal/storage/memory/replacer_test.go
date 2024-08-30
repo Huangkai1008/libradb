@@ -1,11 +1,11 @@
 package memory_test
 
 import (
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive  // ginkgo
 	. "github.com/onsi/gomega"    //nolint:revive  // ginkgo
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 )
 
 var _ = Describe("LRUKReplacer", func() {
@@ -38,7 +38,7 @@ var _ = Describe("LRUKReplacer", func() {
 
 				pageNumber, err := replacer.Evict()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(pageNumber).To(Equal(page.Number(2)))
+				Expect(pageNumber).To(Equal(table.PageNumber(2)))
 			})
 
 			It("should skip the page which not evictable", func() {
@@ -60,7 +60,7 @@ var _ = Describe("LRUKReplacer", func() {
 
 				pageNumber, err := replacer.Evict()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(pageNumber).To(Equal(page.Number(3)))
+				Expect(pageNumber).To(Equal(table.PageNumber(3)))
 			})
 
 			It("should raise error if no pages to evict", func() {
@@ -78,7 +78,7 @@ var _ = Describe("LRUKReplacer", func() {
 
 				pageNumber, err := replacer.Evict()
 				Expect(err).To(HaveOccurred())
-				Expect(pageNumber).To(Equal(page.InvalidPageNumber))
+				Expect(pageNumber).To(Equal(table.InvalidPageNumber))
 			})
 		})
 
@@ -95,7 +95,7 @@ var _ = Describe("LRUKReplacer", func() {
 
 					pageNumber, err := replacer.Evict()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(pageNumber).To(Equal(page.Number(1)))
+					Expect(pageNumber).To(Equal(table.PageNumber(1)))
 
 					err = replacer.Remove(pageNumber)
 					Expect(err).NotTo(HaveOccurred())

@@ -3,9 +3,8 @@ package memory
 import (
 	"container/list"
 	"errors"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"sync"
-
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 )
 
 // LRUKReplacer implements the LRU-k replacement policy.
@@ -27,37 +26,37 @@ type LRUKReplacer struct {
 	// size is the number of buffer pages can be evicted.
 	size          int
 	historyList   *list.List
-	historyMap    map[page.Number]*list.Element
+	historyMap    map[table.PageNumber]*list.Element
 	cacheList     *list.List
-	cacheMap      map[page.Number]*list.Element
-	accessCounter map[page.Number]int
-	evictable     map[page.Number]bool
+	cacheMap      map[table.PageNumber]*list.Element
+	accessCounter map[table.PageNumber]int
+	evictable     map[table.PageNumber]bool
 }
 
 func NewLRUKReplacer(k int) *LRUKReplacer {
 	return &LRUKReplacer{
 		k:             k,
 		historyList:   list.New(),
-		historyMap:    make(map[page.Number]*list.Element),
+		historyMap:    make(map[table.PageNumber]*list.Element),
 		cacheList:     list.New(),
-		cacheMap:      make(map[page.Number]*list.Element),
-		accessCounter: make(map[page.Number]int),
-		evictable:     make(map[page.Number]bool),
+		cacheMap:      make(map[table.PageNumber]*list.Element),
+		accessCounter: make(map[table.PageNumber]int),
+		evictable:     make(map[table.PageNumber]bool),
 	}
 }
 
-func (r *LRUKReplacer) Evict() (page.Number, error) {
+func (r *LRUKReplacer) Evict() (table.PageNumber, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.size == 0 {
-		return page.InvalidPageNumber, ErrNoPageToEvict
+		return table.InvalidPageNumber, ErrNoPageToEvict
 	}
 
 	for e := r.historyList.Back(); e != nil; e = e.Prev() {
-		pageNumber, ok := e.Value.(page.Number)
+		pageNumber, ok := e.Value.(table.PageNumber)
 		if !ok {
-			return page.InvalidPageNumber, errors.New("not a invalid page number")
+			return table.InvalidPageNumber, errors.New("not a invalid page number")
 		}
 		if r.evictable[pageNumber] {
 			return pageNumber, nil
@@ -65,19 +64,19 @@ func (r *LRUKReplacer) Evict() (page.Number, error) {
 	}
 
 	for e := r.cacheList.Back(); e != nil; e = e.Prev() {
-		pageNumber, ok := e.Value.(page.Number)
+		pageNumber, ok := e.Value.(table.PageNumber)
 		if !ok {
-			return page.InvalidPageNumber, errors.New("not a invalid page number")
+			return table.InvalidPageNumber, errors.New("not a invalid page number")
 		}
 		if r.evictable[pageNumber] {
 			return pageNumber, nil
 		}
 	}
 
-	return page.InvalidPageNumber, ErrNoPageToEvict
+	return table.InvalidPageNumber, ErrNoPageToEvict
 }
 
-func (r *LRUKReplacer) Access(pageNumber page.Number) {
+func (r *LRUKReplacer) Access(pageNumber table.PageNumber) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -107,7 +106,7 @@ func (r *LRUKReplacer) Access(pageNumber page.Number) {
 	}
 }
 
-func (r *LRUKReplacer) SetEvictable(pageNumber page.Number, setEvictable bool) {
+func (r *LRUKReplacer) SetEvictable(pageNumber table.PageNumber, setEvictable bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -124,7 +123,7 @@ func (r *LRUKReplacer) SetEvictable(pageNumber page.Number, setEvictable bool) {
 	r.evictable[pageNumber] = setEvictable
 }
 
-func (r *LRUKReplacer) Remove(pageNumber page.Number) error {
+func (r *LRUKReplacer) Remove(pageNumber table.PageNumber) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

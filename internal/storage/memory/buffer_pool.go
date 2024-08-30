@@ -6,7 +6,6 @@ import (
 
 	"github.com/Huangkai1008/libradb/internal/config"
 	"github.com/Huangkai1008/libradb/internal/storage/disk"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"github.com/Huangkai1008/libradb/pkg/ds"
 )
@@ -17,12 +16,12 @@ var (
 
 type controlBlock struct {
 	// bufferPage holds the pointer to the buffer page.
-	bufferPage page.Page
+	bufferPage table.Page
 }
 
 type BufferPool struct {
 	mu          sync.RWMutex
-	diskManager disk.SpaceManager
+	diskManager disk.Manager
 	// poolSize is the size of the buffer pool.
 	poolSize uint16
 
@@ -31,18 +30,18 @@ type BufferPool struct {
 	// flushLinkedList is a chan of control blocks that need to be flushed.
 	flushCh chan *controlBlock
 	// pageTable is a map of page number to control block.
-	pageTable map[page.Number]*controlBlock
+	pageTable map[table.PageNumber]*controlBlock
 	// pinCounter hold the pin/reference count of every page.
-	pinCounter map[page.Number]int
+	pinCounter map[table.PageNumber]int
 	// spaceTable is the map to hold pageNumber to table space ID.
-	spaceTable map[page.Number]table.SpaceID
+	spaceTable map[table.PageNumber]table.SpaceID
 	// replacer is the page eviction policy.
 	replacer Replacer
 }
 
 func NewBufferPool(
 	poolSize uint16,
-	diskManager disk.SpaceManager,
+	diskManager disk.Manager,
 	replacer Replacer,
 ) *BufferPool {
 	m := &BufferPool{
@@ -51,9 +50,9 @@ func NewBufferPool(
 		freeLinkedList: ds.NewDLL[*controlBlock](),
 		flushCh:        make(chan *controlBlock, poolSize),
 		replacer:       replacer,
-		pageTable:      make(map[page.Number]*controlBlock),
-		spaceTable:     make(map[page.Number]table.SpaceID),
-		pinCounter:     make(map[page.Number]int),
+		pageTable:      make(map[table.PageNumber]*controlBlock),
+		spaceTable:     make(map[table.PageNumber]table.SpaceID),
+		pinCounter:     make(map[table.PageNumber]int),
 	}
 
 	for i := uint16(0); i < poolSize; i++ {
@@ -67,7 +66,7 @@ func NewBufferPool(
 }
 
 // ApplyNewPage create a new page in the buffer pool.
-func (m *BufferPool) ApplyNewPage(spaceID table.SpaceID, p page.Page) error {
+func (m *BufferPool) ApplyNewPage(spaceID table.SpaceID, p table.Page) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -90,7 +89,7 @@ func (m *BufferPool) ApplyNewPage(spaceID table.SpaceID, p page.Page) error {
 	return nil
 }
 
-func (m *BufferPool) FetchPage(pageNumber page.Number, s *table.Schema) (page.Page, error) {
+func (m *BufferPool) FetchPage(pageNumber table.PageNumber, s *table.Schema) (table.Page, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -118,19 +117,19 @@ func (m *BufferPool) FetchPage(pageNumber page.Number, s *table.Schema) (page.Pa
 		return nil, err
 	}
 
-	p := page.FromBytes(pageContent, s)
+	p := table.FromBytes(pageContent, s)
 	cb.bufferPage = p
 	m.pin(pageNumber)
 	return p, nil
 }
 
-func (m *BufferPool) pin(pageNumber page.Number) {
+func (m *BufferPool) pin(pageNumber table.PageNumber) {
 	m.pinCounter[pageNumber]++
 	m.replacer.Access(pageNumber)
 	m.replacer.SetEvictable(pageNumber, false)
 }
 
-func (m *BufferPool) Unpin(pageNumber page.Number, markDirty bool) {
+func (m *BufferPool) Unpin(pageNumber table.PageNumber, markDirty bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -153,7 +152,7 @@ func (m *BufferPool) Close() error {
 	return nil
 }
 
-func (m *BufferPool) isPinned(pageNumber page.Number) bool {
+func (m *BufferPool) isPinned(pageNumber table.PageNumber) bool {
 	return m.pinCounter[pageNumber] > 0
 }
 
@@ -182,7 +181,7 @@ func (m *BufferPool) evictPage() error {
 	return nil
 }
 
-func (m *BufferPool) flushPage(pageNumber page.Number) error {
+func (m *BufferPool) flushPage(pageNumber table.PageNumber) error {
 	cb, ok := m.pageTable[pageNumber]
 	if ok {
 		return m.diskManager.WritePage(pageNumber, cb.bufferPage.Buffer())

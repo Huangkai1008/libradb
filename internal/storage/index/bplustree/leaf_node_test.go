@@ -10,13 +10,12 @@ import (
 	"github.com/Huangkai1008/libradb/internal/storage/disk"
 	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type testLeaf struct {
 	key    bplustree.Key
-	record *page.Record
+	record *table.Record
 }
 
 type LeafNodeTestSuite struct {
@@ -75,7 +74,7 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 			key := field.NewValue(primaryType, i)
 			tests = append(tests, testLeaf{
 				key:    key,
-				record: page.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
+				record: table.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
 			})
 		}
 
@@ -101,7 +100,7 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 			key := field.NewValue(primaryType, i)
 			tests = append(tests, testLeaf{
 				key:    key,
-				record: page.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
+				record: table.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
 			})
 		}
 
@@ -127,7 +126,7 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 			key := field.NewValue(primaryType, i)
 			tests = append(tests, testLeaf{
 				key:    key,
-				record: page.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
+				record: table.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
 			})
 		}
 
@@ -137,7 +136,7 @@ func (suite *LeafNodeTestSuite) TestLeafNodePut() {
 
 		pair, err := leafNode.Put(
 			field.NewValue(primaryType, i),
-			page.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
+			table.NewRecordFromLiteral(i, fmt.Sprintf("name-%d", i), i, i%2 == 0, float64(i)),
 		)
 
 		suite.Require().NoError(err)

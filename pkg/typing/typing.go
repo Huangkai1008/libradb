@@ -5,6 +5,10 @@ type Comparable[T any] interface {
 }
 
 type Iterator[T any] interface {
-	Prev() T
 	Next() T
+}
+
+type BacktrackingIterator[T any] interface {
+	Iterator[T]
+	Prev() T
 }

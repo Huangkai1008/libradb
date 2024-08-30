@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"github.com/Huangkai1008/libradb/internal/util"
 	"github.com/Huangkai1008/libradb/pkg/typing"
@@ -25,7 +24,7 @@ type Metadata struct {
 	Schema       *table.Schema
 	tableSpaceID table.SpaceID
 	// rootPageNumber cannot be changed.
-	rootPageNumber page.Number
+	rootPageNumber table.PageNumber
 	height         uint32
 }
 
@@ -61,7 +60,7 @@ func NewBPlusTree(meta *Metadata, bufferManager memory.BufferManager) (*BPlusTre
 	return tree, nil
 }
 
-func (tree *BPlusTree) Get(key Key) (*page.Record, error) {
+func (tree *BPlusTree) Get(key Key) (*table.Record, error) {
 	leafNode, err := tree.getLeafNode(key)
 	if err != nil {
 		return nil, err
@@ -72,7 +71,7 @@ func (tree *BPlusTree) Get(key Key) (*page.Record, error) {
 	return record, nil
 }
 
-func (tree *BPlusTree) Put(key Key, record *page.Record) error {
+func (tree *BPlusTree) Put(key Key, record *table.Record) error {
 	pair, err := tree.root.Put(key, record)
 	if err != nil {
 		return err
@@ -82,7 +81,7 @@ func (tree *BPlusTree) Put(key Key, record *page.Record) error {
 		return nil
 	}
 
-	records := []*page.Record{
+	records := []*table.Record{
 		newIndexRecord(pair.Key(), tree.root.PageNumber()),
 		newIndexRecord(pair.Key(), pair.Value()),
 	}
@@ -102,14 +101,14 @@ func (tree *BPlusTree) Delete(key Key) error {
 	return tree.root.Delete(key)
 }
 
-func (tree *BPlusTree) Scan(key Key) typing.Iterator[*page.Record] {
+func (tree *BPlusTree) Scan(key Key) typing.BacktrackingIterator[*table.Record] {
 	leftMostLeaf, err := tree.getLeafNode(key)
 	if err != nil {
 		return nil
 	}
 
 	index := util.InsertIndex(key, leftMostLeaf.keys)
-	return &RecordIterator{cur: leftMostLeaf, pos: index}
+	return NewRecordIterator(leftMostLeaf, index)
 }
 
 func (tree *BPlusTree) String() string {

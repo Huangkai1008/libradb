@@ -3,11 +3,11 @@ package bplustree
 import (
 	"errors"
 	"fmt"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"slices"
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/util"
 )
 
@@ -21,7 +21,7 @@ type LeafNodeOption func(*LeafNode)
 // LeafNode is the leaf page in the B+ tree.
 type LeafNode struct {
 	meta          *Metadata
-	page          *page.DataPage
+	page          *table.DataPage
 	bufferManager memory.BufferManager
 
 	// keys present the primary key of the record.
@@ -36,7 +36,7 @@ func NewLeafNode(
 	threshold := meta.Order * 2 //nolint:mnd // a threshold is the maximum number of keys in the leaf node.
 	node := &LeafNode{
 		meta:          meta,
-		page:          page.NewDataPage(true),
+		page:          table.NewDataPage(true),
 		bufferManager: buffManager,
 		keys:          make([]Key, 0, threshold),
 	}
@@ -56,19 +56,19 @@ func applyLeafNodeOptions(node *LeafNode, options ...LeafNodeOption) {
 	}
 }
 
-func WithLeafPrev(prev page.Number) LeafNodeOption {
+func WithLeafPrev(prev table.PageNumber) LeafNodeOption {
 	return func(node *LeafNode) {
 		node.page.SetPrev(prev)
 	}
 }
 
-func WithLeafNext(next page.Number) LeafNodeOption {
+func WithLeafNext(next table.PageNumber) LeafNodeOption {
 	return func(node *LeafNode) {
 		node.page.SetNext(next)
 	}
 }
 
-func WithDataRecords(records []*page.Record) LeafNodeOption {
+func WithDataRecords(records []*table.Record) LeafNodeOption {
 	return func(node *LeafNode) {
 		for _, record := range records {
 			node.page.Append(record)
@@ -88,7 +88,7 @@ func (node *LeafNode) Get(key Key) (*LeafNode, error) {
 
 // Put the key and record identifier into the subtree rooted by node.
 // If key already exists, raise an error.
-func (node *LeafNode) Put(key Key, record *page.Record) (*Pair, error) {
+func (node *LeafNode) Put(key Key, record *table.Record) (*Pair, error) {
 	defer node.unpin(true)
 
 	if slices.Contains(node.keys, key) {
@@ -143,14 +143,14 @@ func (node *LeafNode) Delete(key Key) error {
 	return nil
 }
 
-func (node *LeafNode) PageNumber() page.Number {
+func (node *LeafNode) PageNumber() table.PageNumber {
 	return node.page.PageNumber()
 }
 
 func leafNodeFromPage(
 	meta *Metadata,
 	buffManager memory.BufferManager,
-	p *page.DataPage,
+	p *table.DataPage,
 ) *LeafNode {
 	node := &LeafNode{
 		meta:          meta,
@@ -169,7 +169,7 @@ func (node *LeafNode) Order() uint16 {
 	return node.meta.Order
 }
 
-func (node *LeafNode) GetRecord(key Key) *page.Record {
+func (node *LeafNode) GetRecord(key Key) *table.Record {
 	index := util.FindIndex(key, node.keys)
 	if index == -1 {
 		return nil
@@ -183,7 +183,7 @@ func (node *LeafNode) isOverflowed() bool {
 	return len(node.keys) > int(2*node.meta.Order) //nolint:mnd // 2*order is the threshold.
 }
 
-func (node *LeafNode) insertRecord(index int, record *page.Record) {
+func (node *LeafNode) insertRecord(index int, record *table.Record) {
 	node.page.Insert(uint16(index), record)
 }
 
@@ -191,9 +191,9 @@ func (node *LeafNode) unpin(markDirty bool) {
 	node.bufferManager.Unpin(node.PageNumber(), markDirty)
 }
 
-func (node *LeafNode) records() []*page.Record {
+func (node *LeafNode) records() []*table.Record {
 	recordCount := node.page.RecordCount()
-	records := make([]*page.Record, recordCount)
+	records := make([]*table.Record, recordCount)
 	for i := uint16(0); i < recordCount; i++ {
 		records[i] = node.page.Get(i)
 	}

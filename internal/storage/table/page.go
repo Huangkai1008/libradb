@@ -1,13 +1,11 @@
 // Package page provides the interface for a page and its implementation.
-package page
+package table
 
 import (
 	"crypto/rand"
 	"encoding/binary"
 	"math"
 	"math/big"
-
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type Type = uint16
@@ -21,13 +19,13 @@ const (
 	FileTrailerByteSize = 8
 )
 
-const InvalidPageNumber = Number(0)
+const InvalidPageNumber = PageNumber(0)
 
-type Number uint32
+type PageNumber uint32
 
-func NewNumber() Number {
+func NewNumber() PageNumber {
 	n, _ := rand.Int(rand.Reader, big.NewInt(math.MaxUint32))
-	return Number(n.Uint64())
+	return PageNumber(n.Uint64())
 }
 
 type pageOffset = uint16
@@ -35,12 +33,12 @@ type pageOffset = uint16
 // Page represents a page in the storage.
 type Page interface {
 	// PageNumber returns the page number.
-	PageNumber() Number
+	PageNumber() PageNumber
 	// Buffer returns the byte slice of the page.
 	Buffer() []byte
 }
 
-func FromBytes(buf []byte, s *table.Schema) Page {
+func FromBytes(buf []byte, s *Schema) Page {
 	header := fileHeaderFromBytes(buf)
 	if header.pageType == DataPageType {
 		return DataPageFromBytes(buf, s)
@@ -52,13 +50,13 @@ func FromBytes(buf []byte, s *table.Schema) Page {
 // fileHeader represents the header of a file.
 type fileHeader struct {
 	// The page number is a unique identifier for the page.
-	pageNumber Number
+	pageNumber PageNumber
 	// pageType of the page.
 	pageType Type
 	// The prevPageNumber is the page number of the previous page in the file.
-	prevPageNumber Number
+	prevPageNumber PageNumber
 	// The nextPageNumber is the page number of the next page in the file.
-	nextPageNumber Number
+	nextPageNumber PageNumber
 }
 
 func newFileHeader(pageType Type) *fileHeader {
@@ -93,16 +91,16 @@ func (h *fileHeader) toBytes() []byte {
 func fileHeaderFromBytes(buf []byte) *fileHeader {
 	offset := 0
 	// The first 4 bytes are the page number.
-	pageNumber := Number(binary.LittleEndian.Uint32(buf[offset : offset+4]))
+	pageNumber := PageNumber(binary.LittleEndian.Uint32(buf[offset : offset+4]))
 	offset += 4
 	// The next 2 bytes are the page type.
 	pageType := binary.LittleEndian.Uint16(buf[offset : offset+2])
 	offset += 2
 	// The next 4 bytes are the prevPageNumber.
-	prevPageNumber := Number(binary.LittleEndian.Uint32(buf[offset : offset+4]))
+	prevPageNumber := PageNumber(binary.LittleEndian.Uint32(buf[offset : offset+4]))
 	offset += 4
 	// The next 4 bytes are the nextPageNumber.
-	nextPageNumber := Number(binary.LittleEndian.Uint32(buf[offset : offset+4]))
+	nextPageNumber := PageNumber(binary.LittleEndian.Uint32(buf[offset : offset+4]))
 	return &fileHeader{
 		pageNumber:     pageNumber,
 		pageType:       pageType,

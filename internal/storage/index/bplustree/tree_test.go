@@ -11,7 +11,6 @@ import (
 	"github.com/Huangkai1008/libradb/internal/storage/disk"
 	"github.com/Huangkai1008/libradb/internal/storage/index/bplustree"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
@@ -48,7 +47,7 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 		})
 		DescribeTable("Put a key in tree",
 			func(key int, values []any) {
-				record := page.NewRecordFromLiteral(values...)
+				record := table.NewRecordFromLiteral(values...)
 				err := tree.Put(field.NewValue(pkType, key), record)
 				Expect(err).ToNot(HaveOccurred())
 			},
@@ -64,17 +63,17 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 		When("Put duplicate key", func() {
 			It("should raise error", func() {
 				By("Add a key")
-				record := page.NewRecordFromLiteral(4, "Alice", 20, true, 90.5)
+				record := table.NewRecordFromLiteral(4, "Alice", 20, true, 90.5)
 				err := tree.Put(field.NewValue(pkType, 4), record)
 				Expect(err).ToNot(HaveOccurred())
 
 				By("Add another key")
-				record = page.NewRecordFromLiteral(9, "Bob", 21, false, 85.5)
+				record = table.NewRecordFromLiteral(9, "Bob", 21, false, 85.5)
 				err = tree.Put(field.NewValue(pkType, 9), record)
 				Expect(err).ToNot(HaveOccurred())
 
 				By("Add duplicate key")
-				record = page.NewRecordFromLiteral(4, "Alice", 20, true, 90.5)
+				record = table.NewRecordFromLiteral(4, "Alice", 20, true, 90.5)
 				err = tree.Put(field.NewValue(pkType, 4), record)
 				Expect(err).Should(MatchError(bplustree.ErrKeyExists))
 			})
@@ -92,14 +91,14 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 		DescribeTable("Get a key in tree",
 			func(key int, values []any) {
 				By("Put a key in tree")
-				record := page.NewRecordFromLiteral(values...)
+				record := table.NewRecordFromLiteral(values...)
 				err := tree.Put(field.NewValue(pkType, key), record)
 				Expect(err).ToNot(HaveOccurred())
 
 				By("Get a key in tree")
 				record, err = tree.Get(field.NewValue(pkType, key))
 				Expect(err).ToNot(HaveOccurred())
-				Expect(record).To(Equal(page.NewRecordFromLiteral(values...)))
+				Expect(record).To(Equal(table.NewRecordFromLiteral(values...)))
 			},
 			EntryDescription("get %d with value %v"),
 			Entry(nil, 4, []any{4, "Alice", 20, true, 90.5}),
@@ -122,7 +121,7 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 		DescribeTable("Delete a key in tree",
 			func(key int, values []any) {
 				By("Put a key in tree")
-				record := page.NewRecordFromLiteral(values...)
+				record := table.NewRecordFromLiteral(values...)
 				err := tree.Put(field.NewValue(pkType, key), record)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -147,7 +146,7 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 		When("Delete non-existing key in tree", func() {
 			It("should do nothing", func() {
 				By("Put a key in tree")
-				record := page.NewRecordFromLiteral()
+				record := table.NewRecordFromLiteral()
 				err := tree.Put(field.NewValue(pkType, 4), record)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -181,7 +180,7 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 
 				for _, record := range records {
 					key := field.NewValue(pkType, record[0])
-					_ = tree.Put(key, page.NewRecordFromLiteral(record...))
+					_ = tree.Put(key, table.NewRecordFromLiteral(record...))
 				}
 			})
 		})
@@ -298,14 +297,14 @@ var _ = Describe("B+ Tree Index", Ordered, func() {
 				By(fmt.Sprintf("Put %d in tree", key))
 				err := tree.Put(
 					field.NewValue(pkType, key),
-					page.NewRecordFromLiteral(values...),
+					table.NewRecordFromLiteral(values...),
 				)
 				Expect(err).ToNot(HaveOccurred())
 
 				By(fmt.Sprintf("Get %d in tree", key))
 				retrievedRecord, err := tree.Get(field.NewValue(pkType, key))
 				Expect(err).ToNot(HaveOccurred())
-				Expect(retrievedRecord).To(Equal(page.NewRecordFromLiteral(values...)))
+				Expect(retrievedRecord).To(Equal(table.NewRecordFromLiteral(values...)))
 				GinkgoWriter.Println(tree)
 			}
 

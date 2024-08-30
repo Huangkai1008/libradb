@@ -1,4 +1,4 @@
-package page
+package table
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/Huangkai1008/libradb/internal/field"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type RecordType = uint8
@@ -95,6 +94,10 @@ func (r *Record) GetKey() field.Value {
 	return r.values[0]
 }
 
+func (r *Record) Concat(other *Record) *Record {
+	return NewRecord(append(r.values, other.values...)...)
+}
+
 func (r *Record) String() string {
 	return fmt.Sprintf("%v", r.values)
 }
@@ -123,7 +126,8 @@ func (r *Record) toBytes() []byte {
 	return buf.Bytes()
 }
 
-func recordFromBytes(buf []byte, schema *table.Schema) (*Record, int) {
+// recordFromBytes returns a record from the given bytes and the offset.
+func recordFromBytes(buf []byte, schema *Schema) (*Record, int) {
 	offset := 0
 	header := &recordHeader{
 		deleted: buf[0] == 1,

@@ -3,21 +3,21 @@ package disk
 import (
 	"sync"
 
-	"github.com/Huangkai1008/libradb/internal/storage/page"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type MemoryDiskManager struct {
 	mu    sync.Mutex
-	pages map[page.Number][]byte
+	pages map[table.PageNumber][]byte
 }
 
 func NewMemoryDiskManager() *MemoryDiskManager {
 	return &MemoryDiskManager{
-		pages: make(map[page.Number][]byte),
+		pages: make(map[table.PageNumber][]byte),
 	}
 }
 
-func (m *MemoryDiskManager) ReadPage(pageNumber page.Number, bytes []byte) error {
+func (m *MemoryDiskManager) ReadPage(pageNumber table.PageNumber, bytes []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -30,7 +30,7 @@ func (m *MemoryDiskManager) ReadPage(pageNumber page.Number, bytes []byte) error
 	return nil
 }
 
-func (m *MemoryDiskManager) WritePage(pageNumber page.Number, bytes []byte) error {
+func (m *MemoryDiskManager) WritePage(pageNumber table.PageNumber, bytes []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

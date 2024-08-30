@@ -2,11 +2,11 @@ package bplustree
 
 import (
 	"fmt"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"slices"
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
-	"github.com/Huangkai1008/libradb/internal/storage/page"
 	"github.com/Huangkai1008/libradb/internal/util"
 )
 
@@ -22,14 +22,14 @@ type InnerNodeOption func(*InnerNode)
 // See https://cs186berkeley.net/notes/note4/#properties to learn more.
 type InnerNode struct {
 	meta          *Metadata
-	page          *page.DataPage
+	page          *table.DataPage
 	bufferManager memory.BufferManager
 
 	// keys present the minimum key on the child page they point to,
 	// are sorted in ascending Order.
 	keys []Key
 	// children present the child page numbers.
-	children []page.Number
+	children []table.PageNumber
 }
 
 func NewInnerNode(
@@ -42,10 +42,10 @@ func NewInnerNode(
 		meta:          meta,
 		bufferManager: buffManager,
 		keys:          make([]Key, 0, threshold),
-		children:      make([]page.Number, 0, threshold+1),
+		children:      make([]table.PageNumber, 0, threshold+1),
 	}
 
-	node.page = page.NewDataPage(false)
+	node.page = table.NewDataPage(false)
 	err := buffManager.ApplyNewPage(meta.tableSpaceID, node.page)
 	if err != nil {
 		return nil, err
@@ -60,19 +60,19 @@ func applyInnerNodeOptions(node *InnerNode, options ...InnerNodeOption) {
 	}
 }
 
-func WithInnerPrev(prev page.Number) InnerNodeOption {
+func WithInnerPrev(prev table.PageNumber) InnerNodeOption {
 	return func(node *InnerNode) {
 		node.page.SetPrev(prev)
 	}
 }
 
-func WithInnerNext(next page.Number) InnerNodeOption {
+func WithInnerNext(next table.PageNumber) InnerNodeOption {
 	return func(node *InnerNode) {
 		node.page.SetNext(next)
 	}
 }
 
-func WithIndexRecords(records []*page.Record) InnerNodeOption {
+func WithIndexRecords(records []*table.Record) InnerNodeOption {
 	return func(node *InnerNode) {
 		for _, record := range records {
 			node.page.Append(record)
@@ -83,7 +83,7 @@ func WithIndexRecords(records []*page.Record) InnerNodeOption {
 			}
 
 			val := record.Get(1).Val()
-			node.children = append(node.children, page.Number(val.(int32)))
+			node.children = append(node.children, table.PageNumber(val.(int32)))
 		}
 	}
 }
@@ -101,7 +101,7 @@ func (node *InnerNode) Get(key Key) (*LeafNode, error) {
 	return child.Get(key)
 }
 
-func (node *InnerNode) Put(key Key, record *page.Record) (*Pair, error) {
+func (node *InnerNode) Put(key Key, record *table.Record) (*Pair, error) {
 	defer node.unpin(true)
 
 	index := util.SearchIndex(key, node.keys)
@@ -165,14 +165,14 @@ func (node *InnerNode) Delete(key Key) error {
 	return leafNode.Delete(key)
 }
 
-func (node *InnerNode) PageNumber() page.Number {
+func (node *InnerNode) PageNumber() table.PageNumber {
 	return node.page.PageNumber()
 }
 
 func innerNodeFromPage(
 	meta *Metadata,
 	buffManager memory.BufferManager,
-	p *page.DataPage,
+	p *table.DataPage,
 ) *InnerNode {
 	node := &InnerNode{
 		meta:          meta,
@@ -187,16 +187,16 @@ func innerNodeFromPage(
 			node.keys = append(node.keys, record.GetKey())
 		}
 		val := record.Get(1).Val()
-		node.children = append(node.children, page.Number(val.(int32)))
+		node.children = append(node.children, table.PageNumber(val.(int32)))
 	}
 	return node
 }
 
-func (node *InnerNode) getChild(index int) page.Number {
+func (node *InnerNode) getChild(index int) table.PageNumber {
 	return node.children[index]
 }
 
-func (node *InnerNode) insertRecord(index int, record *page.Record) {
+func (node *InnerNode) insertRecord(index int, record *table.Record) {
 	node.page.Insert(uint16(index), record)
 }
 

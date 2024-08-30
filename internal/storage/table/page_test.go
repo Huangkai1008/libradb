@@ -1,21 +1,19 @@
-package page_test
+package table_test
 
 import (
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/Huangkai1008/libradb/internal/storage/page"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 func TestPageFromBytes(t *testing.T) {
 	t.Run("should get a valid data page", func(t *testing.T) {
-		p := page.NewDataPage(true)
+		p := table.NewDataPage(true)
 		s := table.NewSchema()
 		contents := p.Buffer()
 
-		newP := page.FromBytes(contents, s)
+		newP := table.FromBytes(contents, s)
 		assert.Equal(t, contents, newP.Buffer())
 	})
 }
