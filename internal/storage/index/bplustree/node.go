@@ -2,10 +2,10 @@ package bplustree
 
 import (
 	"errors"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 
 	"github.com/Huangkai1008/libradb/internal/field"
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 type Pair struct {

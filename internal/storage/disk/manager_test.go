@@ -1,7 +1,6 @@
 package disk_test
 
 import (
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive  // ginkgo
@@ -9,6 +8,7 @@ import (
 
 	"github.com/Huangkai1008/libradb/internal/config"
 	"github.com/Huangkai1008/libradb/internal/storage/disk"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 var _ = Describe("Disk space manager", func() {

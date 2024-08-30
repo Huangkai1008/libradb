@@ -1,10 +1,11 @@
 package table_test
 
 import (
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 func TestPageFromBytes(t *testing.T) {

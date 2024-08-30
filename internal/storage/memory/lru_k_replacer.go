@@ -3,8 +3,9 @@ package memory
 import (
 	"container/list"
 	"errors"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"sync"
+
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 // LRUKReplacer implements the LRU-k replacement policy.

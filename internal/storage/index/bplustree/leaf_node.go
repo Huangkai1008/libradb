@@ -3,11 +3,11 @@ package bplustree
 import (
 	"errors"
 	"fmt"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"slices"
 	"strings"
 
 	"github.com/Huangkai1008/libradb/internal/storage/memory"
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"github.com/Huangkai1008/libradb/internal/util"
 )
 

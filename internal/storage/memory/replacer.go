@@ -2,6 +2,7 @@ package memory
 
 import (
 	"errors"
+
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 

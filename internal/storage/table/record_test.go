@@ -2,10 +2,11 @@ package table_test
 
 import (
 	"fmt"
-	"github.com/Huangkai1008/libradb/internal/storage/table"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
 
 func TestRecord_Equal(t *testing.T) {
