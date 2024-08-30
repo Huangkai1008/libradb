@@ -35,6 +35,8 @@ func NewValue(t Type, val any) Value {
 		return BooleanValue{t: t.(*Boolean), val: val.(bool)}
 	case FLOAT:
 		return FloatValue{t: t.(*Float), val: float32(val.(float64))}
+	case BINARY:
+		return BinaryValue{t: t.(*Binary), val: val.([]byte)}
 	default:
 		panic("not implemented")
 	}
