@@ -29,6 +29,7 @@ func (s *Schema) ByteSize() int {
 	return s.byteSize
 }
 
+// Length returns the number of fields in the schema.
 func (s *Schema) Length() int {
 	return len(s.FieldNames)
 }

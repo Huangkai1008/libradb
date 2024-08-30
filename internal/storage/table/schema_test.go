@@ -80,3 +80,29 @@ func TestSchema_ByteSize(t *testing.T) {
 		})
 	})
 }
+
+func TestSchema_Concat(t *testing.T) {
+	t.Run("should be empty when both schemas are empty", func(t *testing.T) {
+		s1 := table.NewSchema()
+		s2 := table.NewSchema()
+
+		s := s1.Concat(s2)
+
+		assert.Equal(t, 0, s.Length())
+
+	})
+
+	t.Run("should return a new schema with all fields from both schemas", func(t *testing.T) {
+		s1 := table.NewSchema().
+			WithField("x", field.NewInteger()).
+			WithField("y", field.NewVarchar(field.WithLength(10)))
+
+		s2 := table.NewSchema().
+			WithField("z", field.NewBoolean()).
+			WithField("w", field.NewFloat())
+
+		s := s1.Concat(s2)
+
+		assert.Equal(t, 4, s.Length())
+	})
+}
