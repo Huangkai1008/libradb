@@ -27,7 +27,7 @@ var _ = Describe("Disk space manager", func() {
 			When("read non-existing page", func() {
 				It("should return an error", func() {
 					pageContent := make([]byte, config.PageSize)
-					err := diskManager.ReadPage(table.NewNumber(), pageContent)
+					err := diskManager.ReadPage(table.InvalidPageNumber, pageContent)
 					Expect(err).To(HaveOccurred())
 					Expect(err).Should(MatchError(disk.ErrPageNotAllocated))
 				})

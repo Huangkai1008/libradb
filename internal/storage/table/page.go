@@ -1,11 +1,10 @@
-// Package page provides the interface for a page and its implementation.
 package table
 
 import (
-	"crypto/rand"
 	"encoding/binary"
-	"math"
-	"math/big"
+	"os"
+	"strconv"
+	"sync"
 )
 
 type Type = uint16
@@ -19,13 +18,42 @@ const (
 	FileTrailerByteSize = 8
 )
 
-const InvalidPageNumber = PageNumber(0)
+var newPageNumberGenerator = sync.OnceValue(NewPageNumberGenerator) //nolint:gochecknoglobals // Global variable for the page number generator.
 
 type PageNumber uint32
 
-func NewNumber() PageNumber {
-	n, _ := rand.Int(rand.Reader, big.NewInt(math.MaxUint32))
-	return PageNumber(n.Uint64())
+const (
+	InvalidPageNumber   = PageNumber(0)
+	CurPageNumberEnvKey = "CUR_PAGE_NUMBER"
+)
+
+type PageNumberGenerator struct {
+	curPageNumber PageNumber
+	mu            sync.Mutex
+}
+
+func NewPageNumberGenerator() *PageNumberGenerator {
+	// Get the current page number from the environment variable
+	curPageNumber := os.Getenv(CurPageNumberEnvKey)
+
+	// Default to 0 if the environment variable is missing or invalid
+	pageNumber, err := strconv.Atoi(curPageNumber)
+	if err != nil {
+		pageNumber = 0
+	}
+
+	// Initialize the generator with the determined page number
+	return &PageNumberGenerator{
+		curPageNumber: PageNumber(pageNumber),
+	}
+}
+
+func (g *PageNumberGenerator) NextPageNumber() PageNumber {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.curPageNumber++
+	return g.curPageNumber
 }
 
 type pageOffset = uint16
@@ -60,8 +88,9 @@ type fileHeader struct {
 }
 
 func newFileHeader(pageType Type) *fileHeader {
+	g := newPageNumberGenerator()
 	return &fileHeader{
-		pageNumber: NewNumber(),
+		pageNumber: g.NextPageNumber(),
 		pageType:   pageType,
 	}
 }
