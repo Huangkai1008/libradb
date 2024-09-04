@@ -207,3 +207,53 @@ func TestFloatValue_Compare(t *testing.T) {
 		assert.Equal(t, tt.expected, equality)
 	}
 }
+
+func TestBinaryValue_ToBytes(t *testing.T) {
+	typ := field.NewBinary()
+	var tests = []struct {
+		val []byte
+	}{
+		{[]byte{}},
+		{[]byte{1}},
+		{[]byte{1, 2}},
+		{[]byte{1, 2, 3}},
+		{[]byte{1, 2, 3, 4}},
+		{[]byte{1, 2, 3, 4, 5}},
+		{[]byte{1, 2, 3, 4, 5, 6}},
+	}
+
+	for _, tt := range tests {
+		v := field.NewValue(typ, tt.val)
+
+		bytes := v.ToBytes()
+		newV, err := field.FromBytes(typ, bytes)
+
+		require.NoError(t, err)
+		assert.Len(t, bytes, field.ByteSize(v))
+		assert.Equal(t, v.Val(), newV.Val())
+	}
+}
+
+func TestBinaryValue_Compare(t *testing.T) {
+	typ := field.NewBinary()
+	var tests = []struct {
+		val1     []byte
+		val2     []byte
+		expected bool
+	}{
+		{[]byte{1, 2, 3}, []byte{1, 2, 3}, true},
+		{[]byte{1, 2, 3}, []byte{1, 2, 3, 4}, false},
+		{[]byte{1, 2, 3}, []byte{1, 2}, false},
+		{[]byte{}, []byte{}, true},
+		{[]byte{1}, []byte{1}, true},
+	}
+
+	for _, tt := range tests {
+		v1 := field.NewValue(typ, tt.val1)
+		v2 := field.NewValue(typ, tt.val2)
+
+		equality := v1.Compare(v2) == 0
+
+		assert.Equal(t, tt.expected, equality)
+	}
+}

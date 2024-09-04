@@ -15,7 +15,7 @@ import (
 
 var (
 	ErrValueNil         = errors.New("value cannot be nil")
-	ErrByteSizeMismatch = errors.New("bytesize mismatch")
+	ErrByteSizeMismatch = errors.New("byte size mismatch")
 )
 
 type Value interface {
@@ -47,9 +47,13 @@ func IsNull(v Value) bool {
 }
 
 func ByteSize(v Value) int {
-	if IsVarLen(v.Type()) {
+	if v.Type().TypeID() == VARCHAR {
 		perByteSize := v.Type().ByteSize() / Length(v.Type())
 		return perByteSize * utf8.RuneCountInString(v.Val().(string))
+	}
+
+	if v.Type().TypeID() == BINARY {
+		return len(v.Val().([]byte))
 	}
 	return v.Type().ByteSize()
 }
