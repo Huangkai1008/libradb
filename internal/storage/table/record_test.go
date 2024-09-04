@@ -85,6 +85,7 @@ func TestRecord_Get(t *testing.T) {
 		})
 	}
 }
+
 func TestRecord_GetKey(t *testing.T) {
 	var tests = []struct {
 		record   *table.Record
@@ -98,6 +99,43 @@ func TestRecord_GetKey(t *testing.T) {
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
 			assert.EqualValues(t, test.expected, test.record.GetKey().Val())
+		})
+	}
+}
+
+func TestRecord_Concat(t *testing.T) {
+	var tests = []struct {
+		record1  *table.Record
+		record2  *table.Record
+		expected *table.Record
+	}{
+		{
+			table.NewRecordFromLiteral(),
+			table.NewRecordFromLiteral(),
+			table.NewRecordFromLiteral(),
+		},
+		{
+			table.NewRecordFromLiteral(1, "Hello"),
+			table.NewRecordFromLiteral(2, "World"),
+			table.NewRecordFromLiteral(1, "Hello", 2, "World"),
+		},
+		{
+			table.NewRecordFromLiteral(1, "Hello", 2, "World"),
+			table.NewRecordFromLiteral(3, "Goodbye"),
+			table.NewRecordFromLiteral(1, "Hello", 2, "World", 3, "Goodbye"),
+		},
+		{
+			table.NewRecordFromLiteral(1, "Hello"),
+			table.NewRecordFromLiteral(2, "World", 3, "Goodbye"),
+			table.NewRecordFromLiteral(1, "Hello", 2, "World", 3, "Goodbye"),
+		},
+	}
+
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			concatenated := test.record1.Concat(test.record2)
+
+			assert.Equal(t, test.expected, concatenated)
 		})
 	}
 }
