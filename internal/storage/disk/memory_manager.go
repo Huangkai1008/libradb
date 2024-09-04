@@ -37,3 +37,11 @@ func (m *MemoryDiskManager) WritePage(pageNumber table.PageNumber, bytes []byte)
 	m.pages[pageNumber] = bytes
 	return nil
 }
+
+func (m *MemoryDiskManager) Close() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.pages = make(map[table.PageNumber][]byte)
+	return nil
+}

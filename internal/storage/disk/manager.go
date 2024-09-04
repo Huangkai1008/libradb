@@ -3,6 +3,7 @@ package disk
 import (
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/Huangkai1008/libradb/internal/storage/table"
 )
@@ -18,4 +19,5 @@ type Manager interface {
 	ReadPage(table.PageNumber, []byte) error
 	// WritePage writes a page to disk.
 	WritePage(table.PageNumber, []byte) error
+	io.Closer
 }

@@ -55,6 +55,22 @@ var _ = Describe("Disk space manager", func() {
 			diskManager = disk.NewMemoryDiskManager()
 		})
 
+		AfterAll(func() {
+			_ = diskManager.Close()
+		})
+
+		AssertSpaceManagerBehavior()
+	})
+
+	Describe("Disk space manager", Ordered, func() {
+		BeforeAll(func() {
+			diskManager, _ = disk.NewSpaceManager("/tmp")
+		})
+
+		AfterAll(func() {
+			_ = diskManager.Close()
+		})
+
 		AssertSpaceManagerBehavior()
 	})
 

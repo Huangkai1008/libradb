@@ -18,7 +18,8 @@ const (
 	FileTrailerByteSize = 8
 )
 
-var newPageNumberGenerator = sync.OnceValue(NewPageNumberGenerator) //nolint:gochecknoglobals // Global variable for the page number generator.
+//nolint:gochecknoglobals // Global variable for the page number generator.
+var newPageNumberGenerator = sync.OnceValue(NewPageNumberGenerator)
 
 type PageNumber uint32
 

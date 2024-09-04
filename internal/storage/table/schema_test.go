@@ -89,7 +89,6 @@ func TestSchema_Concat(t *testing.T) {
 		s := s1.Concat(s2)
 
 		assert.Equal(t, 0, s.Length())
-
 	})
 
 	t.Run("should return a new schema with all fields from both schemas", func(t *testing.T) {
